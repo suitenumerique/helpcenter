@@ -1,0 +1,196 @@
+.fr-collapse,
+.fr-collapse--expanded,
+.fr-collapsing,
+.fr-collapse::before {
+  transition: none !important;
+}
+
+.fr-header__operator {
+  min-width: 155px;
+}
+
+@media (min-width: 768px) {
+  .fr-footer__logo {
+    max-width: 210px !important;
+  }
+}
+
+html,
+body {
+  min-width: 320px;
+}
+
+/* Wider search bar in the header — grows leftward instead of overflowing right.
+   DSFR caps .fr-header__tools .fr-header__search at 24rem (384px) at >=62em;
+   raising that cap lets the bar expand into the space on its left. */
+@media (min-width: 62em) {
+  .fr-header .fr-header__tools .fr-header__search {
+    max-width: 500px;
+  }
+  .fr-header .fr-search-bar {
+    min-width: 0;
+  }
+}
+
+/* Search results dropdown */
+.helpcenter-search-results-container {
+  z-index: 1000;
+  max-width: 90vw;
+}
+
+.helpcenter-search-results {
+  background: var(--background-default-grey);
+  border: 1px solid var(--border-default-grey);
+  border-top: none;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.helpcenter-search-results li + li {
+  border-top: 1px solid var(--border-default-grey);
+}
+
+.helpcenter-search-results li {
+  padding: 0;
+  transition: background-color 0.1s;
+}
+
+.helpcenter-search-results a {
+  display: block;
+  padding: 0.75rem 1rem 0.75rem 0.75rem;
+  text-decoration: none;
+  background-image: none;
+  color: inherit;
+  border-left: 3px solid transparent;
+  transition: border-left-color 0.1s;
+}
+
+.helpcenter-search-results li:hover,
+.helpcenter-search-results li:focus-within,
+.helpcenter-search-results li.helpcenter-search-active {
+  background: var(--background-alt-blue-france);
+}
+
+.helpcenter-search-results li:hover > a,
+.helpcenter-search-results li.helpcenter-search-active > a,
+.helpcenter-search-results a:focus {
+  border-left-color: var(--border-action-high-blue-france);
+  outline: none;
+}
+
+.helpcenter-search-results a strong {
+  display: block;
+  color: var(--text-action-high-blue-france);
+  margin-bottom: 0.25rem;
+}
+
+.helpcenter-search-results a span {
+  font-size: 0.85rem;
+  color: var(--text-mention-grey);
+}
+
+.helpcenter-search-results a span mark {
+  background: var(--background-contrast-yellow-tournesol);
+  color: var(--text-default-grey);
+  padding: 0 2px;
+  font-weight: 600;
+}
+
+.helpcenter-search-empty {
+  padding: 1rem;
+  color: var(--text-mention-grey);
+  font-size: 0.9rem;
+}
+
+/* Docs page layout: sidebar | main (760px fixed) | TOC.
+   Lives inside .fr-container, so it's already capped at DSFR's 1248px.
+   No column-gap: the SideMenu provides its own right padding, so an extra gap
+   would double up. The TOC sets its own margin-left explicitly. */
+.helpcenter-page-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  row-gap: 1.5rem;
+}
+
+@media (min-width: 48em) {
+  .helpcenter-page-layout {
+    grid-template-columns: 240px minmax(0, 760px);
+  }
+}
+
+@media (min-width: 78em) {
+  .helpcenter-page-layout {
+    grid-template-columns: 240px 760px minmax(0, 1fr);
+  }
+}
+
+.helpcenter-main-col {
+  min-width: 0;
+}
+
+.helpcenter-toc-col {
+  display: none;
+  min-width: 0;
+}
+
+@media (min-width: 78em) {
+  .helpcenter-toc-col {
+    display: block;
+    margin-left: 2rem;
+  }
+}
+
+.helpcenter-toc {
+  position: sticky;
+  top: 1rem;
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  font-size: 0.8125rem;
+  border-left: 1px solid var(--border-default-grey);
+  padding-left: 1rem;
+}
+
+.helpcenter-toc-title {
+  font-weight: 700;
+  font-size: 0.8125rem;
+  margin-bottom: 0.5rem;
+  color: var(--text-title-grey);
+}
+
+.helpcenter-toc ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.helpcenter-toc li {
+  margin: 0;
+  padding: 0;
+  line-height: 1.3;
+}
+
+.helpcenter-toc a {
+  display: block;
+  padding: 0.25rem 0 0.25rem 0.5rem;
+  text-decoration: none;
+  background-image: none;
+  color: var(--text-mention-grey);
+  border-left: 2px solid transparent;
+  margin-left: -1rem;
+  padding-left: calc(1rem - 2px);
+  transition: color 0.1s, border-left-color 0.1s;
+}
+
+.helpcenter-toc a:hover {
+  color: var(--text-action-high-blue-france);
+}
+
+.helpcenter-toc li.helpcenter-toc-active > a {
+  color: var(--text-action-high-blue-france);
+  border-left-color: var(--border-action-high-blue-france);
+  font-weight: 600;
+}

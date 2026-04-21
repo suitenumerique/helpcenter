@@ -1,0 +1,71 @@
+name: helpcenter
+
+# Services for local development
+services:
+  
+  redis:
+    image: redis:5
+    ports:
+      - "8952:6379"
+
+  frontend-dev:
+    build:
+      context: .
+      target: runtime-dev
+    ports:
+      - "8990:8990"
+    volumes:
+      - ./:/app
+    env_file:
+      - .env.defaults
+      - .env.local
+    depends_on:
+      - redis
+
+  frontend-base:
+    build:
+      context: .
+      target: runtime-dev
+    volumes:
+      - ./:/app
+    env_file:
+      - .env.defaults
+      - .env.local
+
+  frontend-built:
+    build:
+      context: .
+      target: runtime-prod
+    ports:
+      - "8990:8990"
+    env_file:
+      - .env.defaults
+      - .env.local
+      - path: .env.staging
+        required: false
+
+  frontend-base-amd64:
+    build:
+      context: .
+      target: runtime-dev
+    platform: linux/amd64
+    volumes:
+      - ./:/app
+    env_file:
+      - .env.defaults
+      - .env.local
+
+  frontend-production:
+    profiles:
+      - frontend_production
+    volumes:
+      - ./:/app
+    build:
+      context: .
+      target: runtime-dev
+    pull_policy: build
+    env_file:
+      - .env.defaults
+      - .env.production
+    ports:
+      - "8990:8990"

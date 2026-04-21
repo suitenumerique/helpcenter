@@ -1,0 +1,26 @@
+name: Tests
+
+permissions:
+  contents: read
+
+on:
+  push:
+    branches:
+      - "**"
+
+env:
+  COMPOSE_BAKE: true
+
+jobs:
+
+  front-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+      - name: Create env files
+        run: make create-env-files
+      - name: Install dependencies
+        run: make front-install-deps
+      - name: Run linting checks
+        run: make front-lint-check
