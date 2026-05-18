@@ -1,0 +1,93 @@
+/* Rendered help-center article content.
+   All rules in this file are scoped under .helpcenter-article so they
+   only target user-authored markdown output, never page chrome. */
+
+.helpcenter-article :is(h1, h2, h3, h4) {
+  scroll-margin-top: 80px;
+}
+
+/* Markdown lists wrap each item's content in a <p>, which adds a paragraph
+   margin and makes lists look double-spaced. Collapse that. */
+.helpcenter-article li > p {
+  margin: 0;
+}
+
+/* Indent lists so bullets sit clear of the body text's left edge. */
+.helpcenter-article :is(ul, ol) {
+  padding-left: 2rem;
+}
+
+/* When a paragraph introduces a list ("Test de liste :" + <ul>), tighten the
+   gap so the list reads as attached to its lead-in. */
+.helpcenter-article p:has(+ :is(ul, ol)) {
+  margin-bottom: 0;
+}
+
+/* Task lists: <li><input type="checkbox"><p>...</p></li>.
+   Drop the bullet and lay the row out as flex so wrapped lines (e.g. content
+   after a <br>) hang-indent under the label, not back under the checkbox. */
+.helpcenter-article li:has(> input[type="checkbox"]) {
+  list-style: none;
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.helpcenter-article li > input[type="checkbox"] + p {
+  margin: 0;
+}
+
+/* Full-width content images: rounded corners + soft shadow. */
+.helpcenter-article img[width="960"] {
+  border-radius: 6px;
+  overflow: hidden;
+  box-shadow: 0px 0px 15px 0px rgba(0, 0, 0, 0.2);
+  margin: 1rem 0 2rem 0;
+}
+
+/* Info paragraph that follows a FAQ accordion block: smaller secondary text. */
+.helpcenter-article section.fr-accordion ~ p {
+  font-size: 0.85em;
+}
+
+/* Callout (rendered from a markdown blockquote): secondary grey text with a
+   left border. No quote glyphs, no DSFR Quote component. */
+.helpcenter-article p.helpcenter-callout {
+  padding-left: 1rem;
+  border-left: 2px solid var(--border-default-grey);
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: var(--text-mention-grey);
+}
+
+/* Collapsible <details>/<summary> blocks rendered from the docs CMS.
+   When a <details> is wrapped in a list item, drop the bullet. */
+.helpcenter-article li:has(> details) {
+  list-style: none;
+}
+
+/* The CMS emits <summary><p>…</p></summary>; keep the label on one line. */
+.helpcenter-article summary > p {
+  margin: 0;
+  display: inline;
+}
+
+/* BlockNote inline-content wrapper paragraphs add stray vertical rhythm. */
+.helpcenter-article p.bn-inline-content {
+  margin: 0;
+}
+
+/* Tables rendered from the docs CMS get a light grey 1px grid so cells are
+   visually delimited (the CMS emits a plain <table> without any styling). */
+.helpcenter-article table {
+  border-collapse: collapse;
+  margin: 1rem 0;
+}
+.helpcenter-article :is(th, td) {
+  border: 1px solid var(--border-default-grey);
+  padding: 0.5rem 0.75rem;
+}
+/* CMS wraps cell text in <p>; kill its margin so cells aren't bottom-heavy. */
+.helpcenter-article :is(th, td) > p {
+  margin: 0;
+}
