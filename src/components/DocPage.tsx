@@ -33,6 +33,11 @@ export function buildSidebarItems(
   });
 }
 
+export interface PageNavLink {
+  text: string;
+  href: string;
+}
+
 interface DocPageProps {
   sidebarItems: SideMenuProps.Item[];
   burgerMenuButtonText: string;
@@ -40,6 +45,8 @@ interface DocPageProps {
   pageTitle: string;
   fallbackTitle: string;
   fallbackMessage: string;
+  prevLink?: PageNavLink | null;
+  nextLink?: PageNavLink | null;
 }
 
 export function DocPage({
@@ -49,6 +56,8 @@ export function DocPage({
   pageTitle,
   fallbackTitle,
   fallbackMessage,
+  prevLink,
+  nextLink,
 }: DocPageProps) {
   return (
     <div className={fr.cx("fr-container", "fr-my-4w")}>
@@ -70,6 +79,43 @@ export function DocPage({
                 <p className={fr.cx("fr-text--lead")}>{currentPage.document.frontmatter.summary}</p>
               )}
               <DocumentContent document={currentPage.document} />
+              {(prevLink || nextLink) && (
+                <nav
+                  aria-label="Pagination"
+                  className={`helpcenter-page-switcher ${fr.cx("fr-pt-6w", "fr-mt-14v")}${
+                    !prevLink && nextLink ? " helpcenter-page-switcher--end" : ""
+                  }`}
+                >
+                  {prevLink && (
+                    <p className={fr.cx("fr-mb-0")}>
+                      <a
+                        href={prevLink.href}
+                        className={fr.cx(
+                          "fr-link",
+                          "fr-icon-arrow-left-line",
+                          "fr-link--icon-left",
+                        )}
+                      >
+                        {prevLink.text}
+                      </a>
+                    </p>
+                  )}
+                  {nextLink && (
+                    <p className={fr.cx("fr-mb-0")}>
+                      <a
+                        href={nextLink.href}
+                        className={fr.cx(
+                          "fr-link",
+                          "fr-icon-arrow-right-line",
+                          "fr-link--icon-right",
+                        )}
+                      >
+                        {nextLink.text}
+                      </a>
+                    </p>
+                  )}
+                </nav>
+              )}
             </article>
           ) : (
             <div>

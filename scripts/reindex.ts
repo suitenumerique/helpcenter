@@ -55,7 +55,7 @@ function collectPages(
   const visit = (item: PageItem, parentTitle?: string) => {
     if (item.document?.content) {
       pages.push({
-        url: `/${collectionSlug}/${item.slug}`,
+        url: `/${collectionSlug}/${item.path}`,
         title: item.title,
         content: item.document.content,
         collection: collectionTitle,
@@ -75,12 +75,12 @@ async function gatherPages(site: Site): Promise<PageToIndex[]> {
     try {
       // forceRefresh=true: deploy-time index should reflect the latest CMS state.
       const rawSections = await buildSectionTree(collection.docsId, true);
-      const sections = rawSections.map(buildPageItem);
+      const sections = rawSections.map((s) => buildPageItem(s));
       // CMS interlinks `/docs/UUID/` → helpcenter URLs (unresolved UUIDs get
       // their hrefs stripped so pagefind doesn't surface dead-link text).
       rewriteAllInterlinks(sections, (uuid) => {
         const found = findPageById(sections, uuid);
-        return found ? `/${collection.slug}/${found.slug}` : null;
+        return found ? `/${collection.slug}/${found.path}` : null;
       });
       pages.push(...collectPages(sections, collection.slug, collection.title));
     } catch (e) {

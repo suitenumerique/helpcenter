@@ -5,6 +5,9 @@ export interface PageItem {
   id: string;
   title: string;
   slug: string;
+  // Full path from the collection root, slash-joined (e.g. "fichiers/mes-premiers-pas").
+  // Used as the URL segment after the collection slug.
+  path: string;
   document?: DocsContentResponse;
   children: PageItem[];
 }
@@ -17,24 +20,26 @@ export function displayTitle(rawTitle: string | null | undefined, id: string): s
   return cleanTitle(rawTitle) || `(untitled — ${id.slice(0, 8)})`;
 }
 
-export function buildPageItem(doc: DocsChild): PageItem {
+export function buildPageItem(doc: DocsChild, parentPath = ""): PageItem {
   const rawTitle = doc.document?.frontmatter?.title || doc.title;
   const title = displayTitle(rawTitle, doc.id);
   const slug = doc.document?.frontmatter?.path || (rawTitle ? slugify(rawTitle) : doc.id);
+  const path = parentPath ? `${parentPath}/${slug}` : slug;
   const item: PageItem = {
     id: doc.id,
     title,
     slug,
-    children: (doc.children || []).map(buildPageItem),
+    path,
+    children: (doc.children || []).map((child) => buildPageItem(child, path)),
   };
   if (doc.document) item.document = doc.document;
   return item;
 }
 
-export function findPageBySlug(sections: PageItem[], slug: string): PageItem | null {
+export function findPageByPath(sections: PageItem[], path: string): PageItem | null {
   for (const section of sections) {
-    if (section.slug === slug) return section;
-    const found = findPageBySlug(section.children, slug);
+    if (section.path === path) return section;
+    const found = findPageByPath(section.children, path);
     if (found) return found;
   }
   return null;
@@ -53,6 +58,18 @@ export function getFirstPage(sections: PageItem[]): PageItem | null {
   if (sections.length === 0) return null;
   if (sections[0].children.length > 0) return sections[0].children[0];
   return sections[0];
+}
+
+// DFS in-order flatten — matches the visual reading order of the sidebar,
+// so prev/next navigation walks the tree top-to-bottom.
+export function flattenPages(sections: PageItem[]): PageItem[] {
+  const out: PageItem[] = [];
+  const walk = (item: PageItem) => {
+    out.push(item);
+    for (const child of item.children) walk(child);
+  };
+  for (const section of sections) walk(section);
+  return out;
 }
 
 // CMS interlinks ship as `<a href="/docs/UUID/" data-doc-id="UUID" ...>`.

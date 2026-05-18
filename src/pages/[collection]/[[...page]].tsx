@@ -1,9 +1,10 @@
-import { buildSidebarItems, DocPage } from "@/components/DocPage";
+import { buildSidebarItems, DocPage, PageNavLink } from "@/components/DocPage";
 import {
   buildPageItem,
   cleanTitle,
   findPageById,
-  findPageBySlug,
+  findPageByPath,
+  flattenPages,
   getFirstPage,
   PageItem,
   rewriteAllInterlinks,
@@ -16,13 +17,21 @@ interface CollectionPageProps {
   collection: NavCollection;
   sections: PageItem[];
   currentPage: PageItem | null;
+  prevLink: PageNavLink | null;
+  nextLink: PageNavLink | null;
 }
 
-export default function CollectionPage({ collection, sections, currentPage }: CollectionPageProps) {
+export default function CollectionPage({
+  collection,
+  sections,
+  currentPage,
+  prevLink,
+  nextLink,
+}: CollectionPageProps) {
   const sidebarItems = buildSidebarItems(
     sections,
     currentPage?.id || "",
-    (page) => `/${collection.slug}/${page.slug}`,
+    (page) => `/${collection.slug}/${page.path}`,
   );
 
   const pageTitle = cleanTitle(
@@ -39,6 +48,8 @@ export default function CollectionPage({ collection, sections, currentPage }: Co
         pageTitle={pageTitle}
         fallbackTitle={collection.title}
         fallbackMessage="Page non trouvée."
+        prevLink={prevLink}
+        nextLink={nextLink}
       />
     </>
   );
@@ -66,19 +77,19 @@ export const getServerSideProps: GetServerSideProps<CollectionPageProps> = async
   try {
     const { buildSectionTree } = await import("@/lib/docs2dsfr/server");
     const rawSections = await buildSectionTree(collection.docsId, forceRefresh);
-    const sections = rawSections.map(buildPageItem);
+    const sections = rawSections.map((s) => buildPageItem(s));
 
     // CMS-emitted `<a href="/docs/UUID/">` interlinks → helpcenter URLs.
     rewriteAllInterlinks(sections, (uuid) => {
       const found = findPageById(sections, uuid);
-      return found ? `/${collection.slug}/${found.slug}` : null;
+      return found ? `/${collection.slug}/${found.path}` : null;
     });
 
-    const requestedSlug = pagePath?.join("/") || "";
+    const requestedPath = pagePath?.join("/") || "";
     let currentPage: PageItem | null = null;
 
-    if (requestedSlug) {
-      currentPage = findPageBySlug(sections, requestedSlug);
+    if (requestedPath) {
+      currentPage = findPageByPath(sections, requestedPath);
       if (!currentPage) {
         return { notFound: true };
       }
@@ -91,11 +102,26 @@ export const getServerSideProps: GetServerSideProps<CollectionPageProps> = async
       }
     }
 
+    let prevLink: PageNavLink | null = null;
+    let nextLink: PageNavLink | null = null;
+    if (currentPage) {
+      const flat = flattenPages(sections);
+      const idx = flat.findIndex((p) => p.id === currentPage!.id);
+      const toLink = (p: PageItem): PageNavLink => ({
+        text: p.title,
+        href: `/${collection.slug}/${p.path}`,
+      });
+      if (idx > 0) prevLink = toLink(flat[idx - 1]);
+      if (idx >= 0 && idx < flat.length - 1) nextLink = toLink(flat[idx + 1]);
+    }
+
     return {
       props: {
         collection: { slug: collection.slug, title: collection.title },
         sections,
         currentPage,
+        prevLink,
+        nextLink,
       },
     };
   } catch (error) {
@@ -105,6 +131,8 @@ export const getServerSideProps: GetServerSideProps<CollectionPageProps> = async
         collection: { slug: collection.slug, title: collection.title },
         sections: [],
         currentPage: null,
+        prevLink: null,
+        nextLink: null,
       },
     };
   }

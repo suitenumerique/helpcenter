@@ -1,9 +1,10 @@
-import { buildSidebarItems, DocPage } from "@/components/DocPage";
+import { buildSidebarItems, DocPage, PageNavLink } from "@/components/DocPage";
 import {
   buildPageItem,
   cleanTitle,
   displayTitle,
   findPageById,
+  flattenPages,
   getFirstPage,
   PageItem,
 } from "@/lib/collection-tree";
@@ -19,6 +20,8 @@ interface DraftPageProps {
   rootTitle: string;
   sections: PageItem[];
   currentPage: PageItem | null;
+  prevLink: PageNavLink | null;
+  nextLink: PageNavLink | null;
   error: string | null;
 }
 
@@ -42,6 +45,8 @@ export default function DraftPage({
   rootTitle,
   sections,
   currentPage,
+  prevLink,
+  nextLink,
   error,
 }: DraftPageProps) {
   if (!docId || error) {
@@ -83,6 +88,8 @@ export default function DraftPage({
         pageTitle={pageTitle}
         fallbackTitle={rootTitle}
         fallbackMessage="Page not found."
+        prevLink={prevLink}
+        nextLink={nextLink}
       />
     </>
   );
@@ -100,6 +107,8 @@ export const getServerSideProps: GetServerSideProps<DraftPageProps> = async ({ q
     rootTitle: "",
     sections: [],
     currentPage: null,
+    prevLink: null,
+    nextLink: null,
   };
 
   if (!docId) {
@@ -125,16 +134,18 @@ export const getServerSideProps: GetServerSideProps<DraftPageProps> = async ({ q
       section.children =
         section.numchild > 0 ? (await fetchDocumentChildren(section.id, false, true)).results : [];
     }
-    const sections = rawSections.map(buildPageItem);
+    const sections = rawSections.map((s) => buildPageItem(s));
 
     // If the UUID is itself a leaf with content and no children, render it as the current page.
     if (sections.length === 0 && rootMeta.content) {
       const rootDoc = await getDocument(docId, false, true);
       const rawTitle = rootDoc.frontmatter?.title || rootDoc.title;
+      const slug = rootDoc.frontmatter?.path || (rawTitle ? slugify(rawTitle) : rootDoc.id);
       const rootAsPage: PageItem = {
         id: rootDoc.id,
         title: displayTitle(rawTitle, rootDoc.id),
-        slug: rootDoc.frontmatter?.path || (rawTitle ? slugify(rawTitle) : rootDoc.id),
+        slug,
+        path: slug,
         document: rootDoc,
         children: [],
       };
@@ -144,6 +155,8 @@ export const getServerSideProps: GetServerSideProps<DraftPageProps> = async ({ q
           rootTitle: cleanTitle(rootDoc.title) || "Draft",
           sections: [rootAsPage],
           currentPage: rootAsPage,
+          prevLink: null,
+          nextLink: null,
           error: null,
         },
       };
@@ -159,12 +172,27 @@ export const getServerSideProps: GetServerSideProps<DraftPageProps> = async ({ q
       currentPage.title = displayTitle(rawTitle, currentPage.id);
     }
 
+    let prevLink: PageNavLink | null = null;
+    let nextLink: PageNavLink | null = null;
+    if (currentPage) {
+      const flat = flattenPages(sections);
+      const idx = flat.findIndex((p) => p.id === currentPage!.id);
+      const toLink = (p: PageItem): PageNavLink => ({
+        text: p.title,
+        href: `/draft?docs=${docId}&page=${p.id}`,
+      });
+      if (idx > 0) prevLink = toLink(flat[idx - 1]);
+      if (idx >= 0 && idx < flat.length - 1) nextLink = toLink(flat[idx + 1]);
+    }
+
     return {
       props: {
         docId,
         rootTitle: cleanTitle(rootMeta.title) || "Draft",
         sections,
         currentPage,
+        prevLink,
+        nextLink,
         error: null,
       },
     };

@@ -38,19 +38,6 @@ const unwrapAnchors = (node: ReactNode): ReactNode => {
   });
 };
 
-// Drop any element carrying data-emoji (the leading emoji <span> the CMS
-// duplicates inside a callout's content). The canonical emoji is on the
-// <aside> itself, so removing the inner copy avoids rendering it twice.
-const stripEmojiSpans = (node: ReactNode): ReactNode => {
-  return React.Children.map(node, (child) => {
-    if (!React.isValidElement(child)) return child;
-    const cProps = child.props as { "data-emoji"?: string; children?: ReactNode };
-    if (cProps["data-emoji"]) return null;
-    if (cProps.children === undefined) return child;
-    return React.cloneElement(child, {}, stripEmojiSpans(cProps.children));
-  });
-};
-
 // Map BlockNote backgroundColor names to DSFR CallOut colorVariant values.
 // `default` (and anything unrecognised) falls back to the DSFR default style.
 const CALLOUT_COLOR: Record<string, CallOutProps.ColorVariant> = {
@@ -87,6 +74,10 @@ export const htmlComponents = {
   },
   // Docs CMS callout: <aside role="note" data-emoji="…" data-background-color="…">.
   // Plain <aside>s without role="note" fall through to native rendering.
+  // The CMS emits the emoji twice: once as `data-emoji` on the <aside>, and
+  // once as an inline <span> at the start of the body. We render the body
+  // as-is so the emoji appears inline on the left of the text, matching
+  // Docs' own rendering. `bodyAs="div"` avoids invalid <p><p> nesting.
   aside: ({
     children,
     role,
@@ -104,16 +95,11 @@ export const htmlComponents = {
         </aside>
       );
     }
-    const emoji = rest["data-emoji"];
     const bg = rest["data-background-color"];
     const colorVariant = bg ? CALLOUT_COLOR[bg] : undefined;
     return (
-      <CallOut
-        title={emoji ? <span aria-hidden="true">{emoji}</span> : undefined}
-        titleAs="p"
-        colorVariant={colorVariant}
-      >
-        {stripEmojiSpans(children)}
+      <CallOut bodyAs="div" colorVariant={colorVariant}>
+        {children}
       </CallOut>
     );
   },

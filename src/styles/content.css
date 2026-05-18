@@ -77,6 +77,20 @@
   margin: 0;
 }
 
+/* Callout body: hanging-indent so the emoji sits in its own left column and
+   every wrapped/<br>-broken line aligns past it — text never slides under
+   the emoji. The negative `text-indent` pulls the emoji left into the
+   callout's own padding so it reads as an icon margin. */
+.helpcenter-article .fr-callout p.bn-inline-content {
+  padding-left: 2rem;
+  text-indent: -2rem;
+}
+
+.helpcenter-article .fr-callout span[data-emoji] {
+  font-size: 1.25em;
+  margin-right: 0.5rem;
+}
+
 /* Tables rendered from the docs CMS get a light grey 1px grid so cells are
    visually delimited (the CMS emits a plain <table> without any styling). */
 .helpcenter-article table {
