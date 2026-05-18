@@ -9,3 +9,16 @@ export function getRedis(): Redis {
   }
   return redis;
 }
+
+// Close the singleton so short-lived processes (reindex cron, scripts) can
+// exit cleanly. The Next.js server should never call this.
+export async function closeRedis(): Promise<void> {
+  if (redis) {
+    try {
+      await redis.quit();
+    } catch {
+      // already disconnected or never connected
+    }
+    redis = null;
+  }
+}

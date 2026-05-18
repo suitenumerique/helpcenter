@@ -25,6 +25,7 @@ import {
   rewriteAllInterlinks,
 } from "../src/lib/collection-tree";
 import { buildSectionTree } from "../src/lib/docs2dsfr/server";
+import { closeRedis } from "../src/lib/redis";
 import { allSites, type Site } from "../src/lib/sites";
 
 interface PageToIndex {
@@ -188,6 +189,9 @@ async function run() {
   } finally {
     await pagefind.close();
     await redis.quit();
+    // Also close the shared Redis client used by the docs cache (populated
+    // when buildSectionTree calls into server.tsx → cache.ts).
+    await closeRedis();
   }
 
   if (failed > 0) {
