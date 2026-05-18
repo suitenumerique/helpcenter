@@ -182,7 +182,9 @@ body {
   border-left: 2px solid transparent;
   margin-left: -1rem;
   padding-left: calc(1rem - 2px);
-  transition: color 0.1s, border-left-color 0.1s;
+  transition:
+    color 0.1s,
+    border-left-color 0.1s;
 }
 
 .helpcenter-toc a:hover {

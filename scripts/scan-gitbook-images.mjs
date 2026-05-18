@@ -41,7 +41,9 @@ async function fetchJson(url) {
     }
     const ra = parseInt(r.headers.get("retry-after") || "0", 10);
     const wait = ra > 0 ? ra * 1000 : Math.min(60000, 2000 * 2 ** attempt);
-    console.error(`  ${r.status} on …${url.slice(-50)} — sleeping ${wait}ms (attempt ${attempt + 1})`);
+    console.error(
+      `  ${r.status} on …${url.slice(-50)} — sleeping ${wait}ms (attempt ${attempt + 1})`,
+    );
     await sleep(wait);
     attempt++;
   }

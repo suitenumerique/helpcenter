@@ -1,7 +1,7 @@
 import { getImageProps } from "next/image";
 import { cache, CacheEntry, isExpired } from "../cache";
 import { DocsChild, DocsChildrenResponse, DocsContentResponse } from "./client";
-import { customTags, customVoidTags, htmlComponents } from "./components";
+import { customTags, customVoidTags } from "./components";
 
 const getDocsBaseUrl = (): string => {
   const baseUrl = process.env.DOCS_CMS_URL || "";
@@ -181,48 +181,39 @@ export async function fetchDocumentChildren(
   return { count, next: null, previous: null, results };
 }
 
-export async function getDocument(
-  docId: string,
-  forceRefresh: boolean = false,
-  noCache: boolean = false,
-): Promise<DocsContentResponse> {
-  const document = await fetchDocumentContent(docId, forceRefresh, noCache);
-  document.frontmatter = {};
+// Pure helpers — exported for unit testing without hitting the CMS.
 
-  if (!document.content) return document;
-
-  // Extract frontmatter from the document content
-  const frontmatter = document.content.match(
-    /^<p>---<\/p>((<p>[a-z0-9_-]+\:\s.+?<\/p>)+)<p>---<\/p>/,
-  );
-  if (frontmatter && frontmatter[1]) {
-    document.frontmatter =
-      frontmatter[1]
-        .match(/<p>([a-z0-9]+)\:\s(.+?)<\/p>/g)
-        ?.reduce((acc: Record<string, string>, curr: string) => {
-          const match = curr.match(/<p>([a-z0-9]+)\:\s(.+?)<\/p>/);
-          if (match) {
-            const [, key, value] = match;
-            acc[key.toLowerCase()] = value;
-          }
-          return acc;
-        }, {}) || {};
-    document.content = document.content.slice(frontmatter[0].length);
+// Extracts a frontmatter block of the form
+//   <p>---</p><p>key: value</p>…<p>---</p>
+// and returns {frontmatter, content} with the block stripped from content.
+// If `date` is present, a `dateFormatted` field (fr-FR locale) is added so
+// SSR and client agree on the string and don't hydrate-mismatch.
+export function extractFrontmatter(html: string): {
+  frontmatter: Record<string, string>;
+  content: string;
+} {
+  const frontmatter: Record<string, string> = {};
+  const match = html.match(/^<p>---<\/p>((<p>[a-z0-9_-]+\:\s.+?<\/p>)+)<p>---<\/p>/);
+  if (!match || !match[1]) return { frontmatter, content: html };
+  match[1].match(/<p>([a-z0-9]+)\:\s(.+?)<\/p>/g)?.forEach((p) => {
+    const m = p.match(/<p>([a-z0-9]+)\:\s(.+?)<\/p>/);
+    if (m) frontmatter[m[1].toLowerCase()] = m[2];
+  });
+  if (frontmatter.date) {
+    frontmatter.dateFormatted = new Date(frontmatter.date).toLocaleDateString("fr-FR", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
   }
+  return { frontmatter, content: html.slice(match[0].length) };
+}
 
-  if (document.frontmatter.date) {
-    // Make sure the date formatting always happens on the server side to avoid hydration errors
-    document.frontmatter.dateFormatted = new Date(document.frontmatter.date).toLocaleDateString(
-      "fr-FR",
-      {
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      },
-    );
-  }
-
-  // Convert custom tags to components.
+// Converts entity-escaped custom tags (`<p>&lt;iframe …&gt;&lt;/iframe&gt;</p>`,
+// `<p>&lt;hr/&gt;</p>`, `<p>&lt;accordion-list&gt;</p>…<p>&lt;/accordion-list&gt;</p>`)
+// back into real HTML so rehype-react can render them. Also decodes attribute
+// entities and collapses CMS auto-linkified URLs inside attributes.
+export function restoreEscapedTags(html: string): string {
   // Editors sometimes inject whitespace or zero-width chars (U+200B/200C/200D/FEFF)
   // around the escaped tag inside the wrapping <p>; allow those padding chars.
   const pad = `[\\s\\u200B-\\u200D\\uFEFF]*`;
@@ -237,10 +228,11 @@ export async function getDocument(
       .replace(/&#39;/g, "'")
       .replace(/<a\b[^>]*\bhref="([^"]+)"[^>]*>[^<]*<\/a>/gi, "$1");
 
+  let out = html;
   // Paired tags (open + close). Allow optional attributes after the tag name.
   customTags.forEach((tag) => {
     // Open and close in separate <p> blocks, with content between.
-    document.content = document.content.replace(
+    out = out.replace(
       new RegExp(
         `<p>${pad}&lt;${tag}([\\s\\S]*?)&gt;${pad}<\/p>(.*?)<p>${pad}&lt;\/${tag}&gt;${pad}<\/p>`,
         "gs",
@@ -248,22 +240,34 @@ export async function getDocument(
       (_m, attrs, content) => `<${tag}${normalizeAttrs(attrs)}>${content}</${tag}>`,
     );
     // Open and close inside a single <p> block (no content between).
-    document.content = document.content.replace(
-      new RegExp(
-        `<p>${pad}&lt;${tag}([\\s\\S]*?)&gt;${pad}&lt;\/${tag}&gt;${pad}<\/p>`,
-        "g",
-      ),
+    out = out.replace(
+      new RegExp(`<p>${pad}&lt;${tag}([\\s\\S]*?)&gt;${pad}&lt;\/${tag}&gt;${pad}<\/p>`, "g"),
       (_m, attrs) => `<${tag}${normalizeAttrs(attrs)}></${tag}>`,
     );
   });
-
-  // Void tags (no closing tag). Match `<tag>` or `<tag/>` / `<tag />`.
+  // Void tags (no closing tag). Match `<tag/>` / `<tag />` — bare `<hr>` stays text.
   customVoidTags.forEach((tag) => {
-    document.content = document.content.replace(
+    out = out.replace(
       new RegExp(`<p>${pad}&lt;${tag}([\\s\\S]*?)\\s*\\/&gt;${pad}<\/p>`, "g"),
       (_m, attrs) => `<${tag}${normalizeAttrs(attrs)}/>`,
     );
   });
+  return out;
+}
+
+export async function getDocument(
+  docId: string,
+  forceRefresh: boolean = false,
+  noCache: boolean = false,
+): Promise<DocsContentResponse> {
+  const document = await fetchDocumentContent(docId, forceRefresh, noCache);
+  document.frontmatter = {};
+
+  if (!document.content) return document;
+
+  const fm = extractFrontmatter(document.content);
+  document.frontmatter = fm.frontmatter;
+  document.content = restoreEscapedTags(fm.content);
 
   // Remove blank paragraphs at the top
   document.content = document.content.replace(/^<p><\/p>/, "");
@@ -302,13 +306,43 @@ export async function getDocumentChildren(
       try {
         doc.document = await getDocument(doc.id, forceRefresh, noCache);
       } catch (e) {
-        console.warn(
-          `getDocument failed for ${doc.id}:`,
-          e instanceof Error ? e.message : e,
-        );
+        console.warn(`getDocument failed for ${doc.id}:`, e instanceof Error ? e.message : e);
       }
     }),
   );
 
   return response.results;
+}
+
+// Three-level fetch (sections → children → grandchildren) with per-fetch
+// tolerance so a single transient failure doesn't blank the whole tree.
+// Filters out `_drafts` at the top level. Used by both SSR and reindex.
+export async function buildSectionTree(
+  rootId: string,
+  forceRefresh: boolean = false,
+  noCache: boolean = false,
+): Promise<DocsChild[]> {
+  const safeChildren = async (id: string): Promise<DocsChild[]> => {
+    try {
+      return await getDocumentChildren(id, forceRefresh, noCache);
+    } catch (e) {
+      console.warn(`children fetch failed for ${id}:`, e instanceof Error ? e.message : e);
+      return [];
+    }
+  };
+
+  const rawSections = (await getDocumentChildren(rootId, forceRefresh, noCache)).filter(
+    (s) => s.title !== "_drafts",
+  );
+  await Promise.all(
+    rawSections.map(async (section) => {
+      section.children = await safeChildren(section.id);
+      await Promise.all(
+        section.children.map(async (child) => {
+          child.children = await safeChildren(child.id);
+        }),
+      );
+    }),
+  );
+  return rawSections;
 }

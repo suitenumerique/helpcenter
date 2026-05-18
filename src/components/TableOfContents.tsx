@@ -43,8 +43,7 @@ export default function TableOfContents({ deps = [] }: { deps?: unknown[] }) {
         return { id, text, level: parseInt(h.tagName[1], 10) };
       });
 
-      const sameAsPrev =
-        next.length === toc.length && next.every((it, i) => it.id === toc[i].id);
+      const sameAsPrev = next.length === toc.length && next.every((it, i) => it.id === toc[i].id);
       if (sameAsPrev) return;
 
       toc = next;
@@ -100,9 +99,7 @@ export default function TableOfContents({ deps = [] }: { deps?: unknown[] }) {
         {items.map((item) => (
           <li
             key={item.id}
-            className={
-              activeId === item.id ? "helpcenter-toc-active" : undefined
-            }
+            className={activeId === item.id ? "helpcenter-toc-active" : undefined}
             style={{ paddingLeft: `${(item.level - minLevel) * 0.75}rem` }}
           >
             <a

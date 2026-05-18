@@ -67,9 +67,7 @@ export function DocPage({
             <article className="helpcenter-article">
               <h1 className="helpcenter-page-title">{pageTitle}</h1>
               {currentPage.document?.frontmatter?.summary && (
-                <p className={fr.cx("fr-text--lead")}>
-                  {currentPage.document.frontmatter.summary}
-                </p>
+                <p className={fr.cx("fr-text--lead")}>{currentPage.document.frontmatter.summary}</p>
               )}
               <DocumentContent document={currentPage.document} />
             </article>

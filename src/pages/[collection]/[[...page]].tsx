@@ -18,11 +18,7 @@ interface CollectionPageProps {
   currentPage: PageItem | null;
 }
 
-export default function CollectionPage({
-  collection,
-  sections,
-  currentPage,
-}: CollectionPageProps) {
+export default function CollectionPage({ collection, sections, currentPage }: CollectionPageProps) {
   const sidebarItems = buildSidebarItems(
     sections,
     currentPage?.id || "",
@@ -68,31 +64,8 @@ export const getServerSideProps: GetServerSideProps<CollectionPageProps> = async
   }
 
   try {
-    const { getDocumentChildren } = await import("@/lib/docs2dsfr/server");
-
-    const safeChildren = async (id: string) => {
-      try {
-        return await getDocumentChildren(id, forceRefresh);
-      } catch (e) {
-        console.warn(`children fetch failed for ${id}:`, e instanceof Error ? e.message : e);
-        return [];
-      }
-    };
-
-    const rawSections = (await getDocumentChildren(collection.docsId, forceRefresh)).filter(
-      (s) => s.title !== "_drafts",
-    );
-    await Promise.all(
-      rawSections.map(async (section) => {
-        section.children = await safeChildren(section.id);
-        await Promise.all(
-          section.children.map(async (child) => {
-            child.children = await safeChildren(child.id);
-          }),
-        );
-      }),
-    );
-
+    const { buildSectionTree } = await import("@/lib/docs2dsfr/server");
+    const rawSections = await buildSectionTree(collection.docsId, forceRefresh);
     const sections = rawSections.map(buildPageItem);
 
     // CMS-emitted `<a href="/docs/UUID/">` interlinks → helpcenter URLs.

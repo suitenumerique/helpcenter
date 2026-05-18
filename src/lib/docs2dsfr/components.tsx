@@ -121,9 +121,7 @@ export const htmlComponents = {
     open: _open,
     node: _n,
     ...rest
-  }: React.DetailsHTMLAttributes<HTMLDetailsElement> & { node?: unknown }) => (
-    <details {...rest} />
-  ),
+  }: React.DetailsHTMLAttributes<HTMLDetailsElement> & { node?: unknown }) => <details {...rest} />,
   img: (props: React.ImgHTMLAttributes<HTMLImageElement> & { "data-text-alignment"?: string }) => {
     const { src, alt, width, height } = props;
 

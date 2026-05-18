@@ -14,6 +14,17 @@ const eslintConfig = [
   {
     rules: {
       "react/no-unescaped-entities": "off",
+      // Allow intentional discards: `const { node: _n, ...rest } = props`.
+      // Underscore prefix is the standard convention for unused destructures.
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          destructuredArrayIgnorePattern: "^_",
+          caughtErrorsIgnorePattern: "^_",
+        },
+      ],
     },
   },
 ];

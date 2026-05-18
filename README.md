@@ -46,23 +46,23 @@ All site-specific configuration lives in `HELPCENTER_SITES`, a JSON object index
 ```jsonc
 {
   "<hostname>": {
-    "title":             "Site title",                     // header service title
-    "subtitle":          "Site subtitle",                   // optional; header tagline
-    "parentSiteUrl":     "https://...",                    // optional; adds a "back to parent" nav link
-    "parentSiteLabel":   "Retour au site",                 // optional; label for the parent-site link
-    "footerDescription": "...",                            // optional; footer description text
-    "repositoryUrl":     "https://github.com/...",         // optional; footer "Contribute" link
-    "matomoUrl":         "https://matomo.example.com",     // optional; tracking enabled when both matomo* are set
-    "matomoSiteId":      "42",                             // optional; Matomo site id (string)
+    "title": "Site title", // header service title
+    "subtitle": "Site subtitle", // optional; header tagline
+    "parentSiteUrl": "https://...", // optional; adds a "back to parent" nav link
+    "parentSiteLabel": "Retour au site", // optional; label for the parent-site link
+    "footerDescription": "...", // optional; footer description text
+    "repositoryUrl": "https://github.com/...", // optional; footer "Contribute" link
+    "matomoUrl": "https://matomo.example.com", // optional; tracking enabled when both matomo* are set
+    "matomoSiteId": "42", // optional; Matomo site id (string)
     "collections": [
       {
-        "slug":   "guides",                                // URL segment: /guides/...
-        "title":  "Guides",                                // displayed in nav and sidebar
-        "docsId": "<doc-uuid>",                            // Docs CMS parent document UUID
-        "pageId": "<doc-uuid>"                             // optional; landing page within the collection
-      }
-    ]
-  }
+        "slug": "guides", // URL segment: /guides/...
+        "title": "Guides", // displayed in nav and sidebar
+        "docsId": "<doc-uuid>", // Docs CMS parent document UUID
+        "pageId": "<doc-uuid>", // optional; landing page within the collection
+      },
+    ],
+  },
 }
 ```
 
@@ -70,10 +70,10 @@ All site-specific configuration lives in `HELPCENTER_SITES`, a JSON object index
 
 ### Required
 
-| Variable            | Description                                          |
-| ------------------- | ---------------------------------------------------- |
-| `DOCS_CMS_URL`      | Docs CMS base URL (shared by all tenants).           |
-| `HELPCENTER_SITES`  | JSON object mapping hostname to site config (above). |
+| Variable           | Description                                          |
+| ------------------ | ---------------------------------------------------- |
+| `DOCS_CMS_URL`     | Docs CMS base URL (shared by all tenants).           |
+| `HELPCENTER_SITES` | JSON object mapping hostname to site config (above). |
 
 ### Server & infrastructure
 

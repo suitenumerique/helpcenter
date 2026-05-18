@@ -1,5 +1,5 @@
-import "../styles/global.css";
 import "../styles/content.css";
+import "../styles/global.css";
 
 import NextApp, { AppContext, AppInitialProps, AppProps } from "next/app";
 
