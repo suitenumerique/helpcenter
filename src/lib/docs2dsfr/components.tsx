@@ -199,10 +199,11 @@ export const htmlComponents = {
         {tiles.map((tile, i) => (
           <div key={i} className="fr-col-12 fr-col-sm-6 fr-col-md-4">
             <Tile
+              small
               title={tile.title}
               imageUrl={tile.imageUrl}
               imageAlt=""
-              linkProps={{ href: tile.href }}
+              linkProps={{ href: tile.href, target: "_self" }}
             />
           </div>
         ))}
