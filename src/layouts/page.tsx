@@ -103,6 +103,7 @@ export function PageLayout({ children, site }: LayoutProps) {
               text: "Nous contacter",
               linkProps: {
                 href: "mailto:aide@suite.anct.gouv.fr?subject=Guide%20-%20Demande%20d'aide&body=Nom%20de%20la%20plateforme%20concernée%20:%20%0ADécrivez%20votre%20demande",
+                target: "_blank",
               },
             },
           ]}
