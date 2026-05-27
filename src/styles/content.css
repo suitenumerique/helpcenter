@@ -6,6 +6,10 @@
   scroll-margin-top: 80px;
 }
 
+.helpcenter-article .fr-btn {
+  margin-bottom: 1rem;
+}
+
 /* Markdown lists wrap each item's content in a <p>, which adds a paragraph
    margin and makes lists look double-spaced. Collapse that. */
 .helpcenter-article li > p {
