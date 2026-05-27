@@ -62,6 +62,16 @@ export function useSearch() {
     getPagefind();
   }, []);
 
+  // Focus the search input when the DSFR mobile search modal is opened.
+  useEffect(() => {
+    const btn = document.getElementById("fr-header-search-button");
+    if (!btn) return;
+    const handleClick = () =>
+      setTimeout(() => document.getElementById("fr-header-search-input")?.focus(), 300);
+    btn.addEventListener("click", handleClick);
+    return () => btn.removeEventListener("click", handleClick);
+  }, []);
+
   // Track the last successfully-searched query so we only reset activeIndex when new results arrive
   const lastSearchedRef = useRef<string>("");
 
@@ -151,8 +161,29 @@ export function SearchResults({
   const ref = useRef<HTMLDivElement>(null);
   const [style, setStyle] = useState<React.CSSProperties>({});
 
-  // Position dropdown under the search bar. Use absolute (document) coordinates
-  // so the dropdown scrolls with the search bar instead of floating in the viewport.
+  // Keep the DSFR search bar visible at any viewport width while results are open.
+  useEffect(() => {
+    document.body.classList.toggle("helpcenter-search-open", open);
+    return () => document.body.classList.remove("helpcenter-search-open");
+  }, [open]);
+
+  // When the viewport crosses below the DSFR desktop breakpoint while search is
+  // open, close the dropdown and focus the mobile search input.
+  useEffect(() => {
+    if (!open) return;
+    const mq = window.matchMedia("(max-width: 61.9999em)");
+    const handleChange = (e: MediaQueryListEvent) => {
+      if (e.matches) {
+        onClose();
+        document.getElementById("fr-header-search-button")?.click();
+        setTimeout(() => document.getElementById("fr-header-search-input")?.focus(), 300);
+      }
+    };
+    mq.addEventListener("change", handleChange);
+    return () => mq.removeEventListener("change", handleChange);
+  }, [open, onClose]);
+
+  // Position dropdown under the search bar.
   useEffect(() => {
     if (!open) return;
     const searchBar = document.querySelector(".fr-header .fr-search-bar");
@@ -160,9 +191,9 @@ export function SearchResults({
     const update = () => {
       const rect = searchBar.getBoundingClientRect();
       setStyle({
-        position: "absolute",
-        top: rect.bottom + window.scrollY,
-        left: rect.left + window.scrollX,
+        position: "fixed",
+        top: rect.bottom,
+        left: rect.left,
         width: Math.max(rect.width, 400),
       });
     };

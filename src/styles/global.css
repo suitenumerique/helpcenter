@@ -34,7 +34,7 @@ body {
 
 /* Search results dropdown */
 .helpcenter-search-results-container {
-  z-index: 1000;
+  z-index: 2000;
   max-width: 90vw;
 }
 
