@@ -13,6 +13,7 @@ export default function TableOfContents({ deps = [] }: { deps?: unknown[] }) {
   const [activeId, setActiveId] = useState<string>("");
   const [drawerOpen, setDrawerOpen] = useState(false);
   const observerRef = useRef<IntersectionObserver | null>(null);
+  const hasScrolledToHash = useRef(false);
 
   useEffect(() => {
     const article = document.querySelector("article.helpcenter-article");
@@ -56,6 +57,17 @@ export default function TableOfContents({ deps = [] }: { deps?: unknown[] }) {
       setItems(next);
       if (next.length > 0) setActiveId((cur) => cur || next[0].id);
 
+      if (!hasScrolledToHash.current && window.location.hash) {
+        const targetId = window.location.hash.slice(1);
+        const targetEl = document.getElementById(targetId);
+        if (targetEl) {
+          hasScrolledToHash.current = true;
+          const top = targetEl.getBoundingClientRect().top + window.scrollY - 80;
+          window.scrollTo({ top, behavior: "instant" });
+          setActiveId(targetId);
+        }
+      }
+
       if (observer) observer.disconnect();
       visible.clear();
       observer = new IntersectionObserver(
@@ -83,6 +95,7 @@ export default function TableOfContents({ deps = [] }: { deps?: unknown[] }) {
       observerRef.current = observer;
     };
 
+    hasScrolledToHash.current = false;
     scan();
     const mutationObserver = new MutationObserver(scan);
     mutationObserver.observe(article, { childList: true, subtree: true });
