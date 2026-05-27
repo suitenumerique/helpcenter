@@ -200,7 +200,6 @@ export const htmlComponents = {
           <div key={i} className="fr-col-12 fr-col-sm-6 fr-col-md-4">
             <Tile
               small
-              titleAs="p"
               title={tile.title}
               imageUrl={tile.imageUrl}
               imageAlt=""

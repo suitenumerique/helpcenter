@@ -1,5 +1,6 @@
 import { slugify } from "@/lib/collections";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 interface TocItem {
   id: string;
@@ -10,6 +11,7 @@ interface TocItem {
 export default function TableOfContents({ deps = [] }: { deps?: unknown[] }) {
   const [items, setItems] = useState<TocItem[]>([]);
   const [activeId, setActiveId] = useState<string>("");
+  const [drawerOpen, setDrawerOpen] = useState(false);
   const observerRef = useRef<IntersectionObserver | null>(null);
 
   useEffect(() => {
@@ -26,7 +28,11 @@ export default function TableOfContents({ deps = [] }: { deps?: unknown[] }) {
       // the leftmost indent.
       const headings = (
         Array.from(article.querySelectorAll("h1, h2, h3, h4, h5")) as HTMLHeadingElement[]
-      ).filter((h) => !h.classList.contains("helpcenter-page-title"));
+      ).filter(
+        (h) =>
+          !h.classList.contains("helpcenter-page-title") &&
+          !h.closest(".helpcenter-tile-grid"),
+      );
 
       const usedIds = new Set<string>();
       const next: TocItem[] = headings.map((h) => {
@@ -88,37 +94,98 @@ export default function TableOfContents({ deps = [] }: { deps?: unknown[] }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
 
+  // Close drawer on Escape
+  useEffect(() => {
+    if (!drawerOpen) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") setDrawerOpen(false); };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [drawerOpen]);
+
   if (items.length === 0) return null;
 
   const minLevel = Math.min(...items.map((i) => i.level));
 
+  const navItems = (onNavigate?: () => void) =>
+    items.map((item) => (
+      <li
+        key={item.id}
+        className={activeId === item.id ? "helpcenter-toc-active" : undefined}
+        style={{ paddingLeft: `${(item.level - minLevel) * 0.75}rem` }}
+      >
+        <a
+          href={`#${item.id}`}
+          onClick={(e) => {
+            e.preventDefault();
+            const el = document.getElementById(item.id);
+            if (!el) return;
+            const top = el.getBoundingClientRect().top + window.scrollY - 80;
+            window.scrollTo({ top, behavior: "smooth" });
+            history.replaceState(null, "", `#${item.id}`);
+            setActiveId(item.id);
+            onNavigate?.();
+          }}
+        >
+          {item.text}
+        </a>
+      </li>
+    ));
+
   return (
-    <nav className="helpcenter-toc" aria-label="Sommaire de la page">
-      <p className="helpcenter-toc-title">Sur cette page</p>
-      <ul>
-        {items.map((item) => (
-          <li
-            key={item.id}
-            className={activeId === item.id ? "helpcenter-toc-active" : undefined}
-            style={{ paddingLeft: `${(item.level - minLevel) * 0.75}rem` }}
+    <>
+      <nav className="helpcenter-toc" aria-label="Sommaire de la page">
+        <p className="helpcenter-toc-title">Sur cette page</p>
+        <ul>{navItems()}</ul>
+      </nav>
+
+      {createPortal(
+        <>
+          <button
+            className="helpcenter-toc-fab"
+            aria-label="Sommaire de la page"
+            onClick={() => setDrawerOpen(true)}
           >
-            <a
-              href={`#${item.id}`}
-              onClick={(e) => {
-                e.preventDefault();
-                const el = document.getElementById(item.id);
-                if (!el) return;
-                const top = el.getBoundingClientRect().top + window.scrollY - 80;
-                window.scrollTo({ top, behavior: "smooth" });
-                history.replaceState(null, "", `#${item.id}`);
-                setActiveId(item.id);
-              }}
-            >
-              {item.text}
-            </a>
-          </li>
-        ))}
-      </ul>
-    </nav>
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="20" height="20" aria-hidden="true">
+              <path d="M3 4h2v2H3V4zm4 0h14v2H7V4zM3 11h2v2H3v-2zm4 0h14v2H7v-2zM3 18h2v2H3v-2zm4 0h14v2H7v-2z"/>
+            </svg>
+          </button>
+
+          {drawerOpen && (
+            <>
+              <div
+                className="helpcenter-toc-backdrop"
+                aria-hidden="true"
+                onClick={() => setDrawerOpen(false)}
+              />
+              <div
+                className="helpcenter-toc-drawer"
+                role="dialog"
+                aria-modal="true"
+                aria-label="Sommaire de la page"
+              >
+                <div className="helpcenter-toc-drawer-header">
+                  <p className="helpcenter-toc-title" style={{ margin: 0 }}>Sur cette page</p>
+                  <button
+                    className="helpcenter-toc-drawer-close"
+                    aria-label="Fermer le sommaire"
+                    onClick={() => setDrawerOpen(false)}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" width="18" height="18" aria-hidden="true">
+                      <path d="M18 6 6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round" fill="none"/>
+                    </svg>
+                  </button>
+                </div>
+                <nav aria-label="Sommaire de la page">
+                  <ul className="helpcenter-toc-drawer-list">
+                    {navItems(() => setDrawerOpen(false))}
+                  </ul>
+                </nav>
+              </div>
+            </>
+          )}
+        </>,
+        document.body,
+      )}
+    </>
   );
 }
