@@ -54,19 +54,23 @@ export function DocPage({
   prevLink,
   nextLink,
 }: DocPageProps) {
+  const hasSidebar = sidebarItems.length > 0;
+
   return (
     <div className={fr.cx("fr-container", "fr-my-4w")}>
-      <div className="helpcenter-page-layout">
-        <div className="helpcenter-sidebar-col">
-          <SideMenu
-            sticky
-            align="left"
-            burgerMenuButtonText={burgerMenuButtonText}
-            items={sidebarItems}
-          />
-        </div>
+      <div className={hasSidebar ? "helpcenter-page-layout" : undefined}>
+        {hasSidebar && (
+          <div className="helpcenter-sidebar-col">
+            <SideMenu
+              sticky
+              align="left"
+              burgerMenuButtonText={burgerMenuButtonText}
+              items={sidebarItems}
+            />
+          </div>
+        )}
 
-        <div className="helpcenter-main-col">
+        <div className={`helpcenter-main-col${hasSidebar ? "" : " helpcenter-main-col--no-sidebar"}`}>
           {currentPage ? (
             <article className="helpcenter-article">
               <h1 className="helpcenter-page-title">{pageTitle}</h1>

@@ -132,6 +132,12 @@ body {
   min-width: 0;
 }
 
+.helpcenter-main-col--no-sidebar {
+  max-width: 800px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
 .helpcenter-page-switcher {
   box-shadow: inset 0 1px 0 0 var(--background-contrast-grey);
   display: flex;
