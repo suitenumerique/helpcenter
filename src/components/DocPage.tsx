@@ -1,14 +1,9 @@
 import BackToTop from "@/components/BackToTop";
 import TableOfContents from "@/components/TableOfContents";
-import { PageItem } from "@/lib/collection-tree";
+import { PageItem, subtreeContains } from "@/lib/collection-tree";
 import { DocumentContent } from "@/lib/docs2dsfr/client";
 import { fr } from "@codegouvfr/react-dsfr";
 import { SideMenu, SideMenuProps } from "@codegouvfr/react-dsfr/SideMenu";
-
-function subtreeContains(section: PageItem, activeId: string): boolean {
-  if (section.id === activeId) return true;
-  return section.children.some((c) => subtreeContains(c, activeId));
-}
 
 export function buildSidebarItems(
   sections: PageItem[],
@@ -78,6 +73,7 @@ export function DocPage({
               {currentPage.document?.frontmatter?.summary && (
                 <p className={fr.cx("fr-text--lead")}>{currentPage.document.frontmatter.summary}</p>
               )}
+              <TableOfContents deps={[currentPage.id]} />
               <DocumentContent document={currentPage.document} />
               {(prevLink || nextLink) && (
                 <nav
@@ -127,9 +123,6 @@ export function DocPage({
           <BackToTop />
         </div>
 
-        <div className="helpcenter-toc-col">
-          {currentPage && <TableOfContents deps={[currentPage.id]} />}
-        </div>
       </div>
     </div>
   );

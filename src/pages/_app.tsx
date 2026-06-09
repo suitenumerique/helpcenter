@@ -12,6 +12,7 @@ import { createEmotionSsrAdvancedApproach } from "tss-react/next";
 
 import { DefaultSeo } from "next-seo";
 
+import type { SectionNavItem } from "@/pages/[collection]/[[...page]]";
 import type { Site } from "@/lib/sites";
 import { PageLayout } from "../layouts/page";
 
@@ -57,6 +58,10 @@ function App({ Component, pageProps, site }: Props) {
   // Only fall back to the cache on the client. On the server the cache is shared
   // across requests, which would leak one tenant's chrome onto an unknown host.
   const effectiveSite = site ?? (typeof window !== "undefined" ? siteCache : null);
+  const { collection, sectionNavItems } = pageProps as {
+    collection?: { slug: string };
+    sectionNavItems?: SectionNavItem[];
+  };
 
   const matomoUrl = effectiveSite?.matomoUrl;
   const matomoSiteId = effectiveSite?.matomoSiteId;
@@ -83,7 +88,11 @@ function App({ Component, pageProps, site }: Props) {
           flexDirection: "column",
         }}
       >
-        <PageLayout site={effectiveSite}>
+        <PageLayout
+          site={effectiveSite}
+          collectionSlug={collection?.slug}
+          sectionNavItems={sectionNavItems}
+        >
           <Component {...pageProps} />
         </PageLayout>
       </div>

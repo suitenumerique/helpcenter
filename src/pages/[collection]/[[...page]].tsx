@@ -8,14 +8,23 @@ import {
   getFirstPage,
   PageItem,
   rewriteAllInterlinks,
+  subtreeContains,
 } from "@/lib/collection-tree";
 import { getCollectionBySlug, getSiteForHost, NavCollection } from "@/lib/sites";
 import { GetServerSideProps } from "next";
 import { NextSeo } from "next-seo";
 
+export interface SectionNavItem {
+  id: string;
+  title: string;
+  path: string;
+}
+
 interface CollectionPageProps {
   collection: NavCollection;
   sections: PageItem[];
+  activeSectionId: string | null;
+  sectionNavItems: SectionNavItem[];
   currentPage: PageItem | null;
   prevLink: PageNavLink | null;
   nextLink: PageNavLink | null;
@@ -24,12 +33,16 @@ interface CollectionPageProps {
 export default function CollectionPage({
   collection,
   sections,
+  activeSectionId,
   currentPage,
   prevLink,
   nextLink,
 }: CollectionPageProps) {
+  const activeSection = activeSectionId ? sections.find((s) => s.id === activeSectionId) : null;
+  const sidebarSource = activeSection ? activeSection.children : sections;
+
   const sidebarItems = buildSidebarItems(
-    sections,
+    sidebarSource,
     currentPage?.id || "",
     (page) => `/${collection.slug}/${page.path}`,
   );
@@ -115,10 +128,22 @@ export const getServerSideProps: GetServerSideProps<CollectionPageProps> = async
       if (idx >= 0 && idx < flat.length - 1) nextLink = toLink(flat[idx + 1]);
     }
 
+    const activeSection = currentPage
+      ? (sections.find((s) => subtreeContains(s, currentPage.id)) ?? null)
+      : null;
+
+    const sectionNavItems: SectionNavItem[] = sections.map((s) => ({
+      id: s.id,
+      title: s.title,
+      path: s.path,
+    }));
+
     return {
       props: {
         collection: { slug: collection.slug, title: collection.title },
         sections,
+        activeSectionId: activeSection?.id ?? null,
+        sectionNavItems,
         currentPage,
         prevLink,
         nextLink,
@@ -130,6 +155,8 @@ export const getServerSideProps: GetServerSideProps<CollectionPageProps> = async
       props: {
         collection: { slug: collection.slug, title: collection.title },
         sections: [],
+        activeSectionId: null,
+        sectionNavItems: [],
         currentPage: null,
         prevLink: null,
         nextLink: null,

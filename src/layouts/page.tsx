@@ -1,5 +1,6 @@
 import { SearchResults, useSearch } from "@/components/Search";
 import { navCollectionsOf, type Site } from "@/lib/sites";
+import type { SectionNavItem } from "@/pages/[collection]/[[...page]]";
 import { Footer } from "@codegouvfr/react-dsfr/Footer";
 import { Header } from "@codegouvfr/react-dsfr/Header";
 import { SkipLinks } from "@codegouvfr/react-dsfr/SkipLinks";
@@ -18,9 +19,11 @@ const brandTop = (
 type LayoutProps = {
   children: ReactNode;
   site: Site | null;
+  collectionSlug?: string;
+  sectionNavItems?: SectionNavItem[];
 };
 
-export function PageLayout({ children, site }: LayoutProps) {
+export function PageLayout({ children, site, collectionSlug, sectionNavItems }: LayoutProps) {
   const router = useRouter();
   const contentSecurityPolicy = process.env.CONTENT_SECURITY_POLICY;
   const { results, loading, open, query, activeIndex, search, close, onKeyDown, setActiveIndex } =
@@ -48,14 +51,24 @@ export function PageLayout({ children, site }: LayoutProps) {
     title: site.subtitle ? `${site.title} - ${site.subtitle}` : site.title,
   };
 
+  const sectionItems =
+    collectionSlug && sectionNavItems && sectionNavItems.length > 0
+      ? sectionNavItems.map((section) => ({
+          text: section.title,
+          linkProps: { href: `/${collectionSlug}/${section.path}` },
+          isActive: router.asPath.startsWith(`/${collectionSlug}/${section.path}`),
+        }))
+      : null;
+
   const navItems = [
-    ...navCollectionsOf(site).map((collection) => ({
-      text: collection.title,
-      linkProps: {
-        href: `/${collection.slug}/`,
-      },
-      isActive: router.asPath.startsWith(`/${collection.slug}`),
-    })),
+    ...(sectionItems ??
+      navCollectionsOf(site).map((collection) => ({
+        text: collection.title,
+        linkProps: {
+          href: `/${collection.slug}/`,
+        },
+        isActive: router.asPath.startsWith(`/${collection.slug}`),
+      }))),
     ...(site.parentSiteUrl
       ? [
           {

@@ -6,6 +6,38 @@
   scroll-margin-top: 80px;
 }
 
+.helpcenter-heading-anchor {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  margin-left: 0.4em;
+  color: var(--text-action-high-blue-france);
+  text-decoration: none !important;
+  background-image: none !important;
+  background-color: var(--background-alt-grey);
+  border-radius: 4px;
+  padding: 6px;
+  vertical-align: middle;
+  transition: opacity 0.15s, background-color 0.15s;
+  flex-shrink: 0;
+  cursor: pointer;
+}
+
+.helpcenter-heading-anchor svg {
+  width: 16px;
+  height: 16px;
+}
+
+.helpcenter-article :is(h1, h2, h3, h4, h5):hover .helpcenter-heading-anchor {
+  opacity: 1;
+}
+
+.helpcenter-heading-anchor:hover {
+  background-color: var(--background-contrast-grey);
+  opacity: 1;
+}
+
 .helpcenter-article .fr-btn {
   margin-bottom: 1rem;
 }

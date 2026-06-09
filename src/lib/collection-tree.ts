@@ -54,6 +54,11 @@ export function findPageById(sections: PageItem[], id: string): PageItem | null 
   return null;
 }
 
+export function subtreeContains(section: PageItem, id: string): boolean {
+  if (section.id === id) return true;
+  return section.children.some((c) => subtreeContains(c, id));
+}
+
 export function getFirstPage(sections: PageItem[]): PageItem | null {
   if (sections.length === 0) return null;
   if (sections[0].children.length > 0) return sections[0].children[0];
