@@ -59,6 +59,27 @@ const CALLOUT_COLOR: Record<string, CallOutProps.ColorVariant> = {
 type HProps = React.HTMLAttributes<HTMLHeadingElement> & { node?: unknown };
 
 export const htmlComponents = {
+  // DSFR replaces native ol counters with a custom `li-counter` (counter-reset on every <ol>),
+  // which ignores the HTML `start` attribute. Override it via inline style when start != 1.
+  ol: ({
+    start,
+    children,
+    node: _n,
+    style,
+    ...rest
+  }: React.OlHTMLAttributes<HTMLOListElement> & { node?: unknown }) => (
+    <ol
+      {...rest}
+      start={start}
+      style={
+        start !== undefined && start !== 1
+          ? { ...style, counterReset: `li-counter ${start - 1}` }
+          : style
+      }
+    >
+      {children}
+    </ol>
+  ),
   h1: ({ children, node: _n, ...rest }: HProps) => <h2 {...rest}>{children}</h2>,
   h2: ({ children, node: _n, ...rest }: HProps) => <h3 {...rest}>{children}</h3>,
   h3: ({ children, node: _n, ...rest }: HProps) => <h4 {...rest}>{children}</h4>,
