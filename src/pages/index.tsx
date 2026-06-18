@@ -12,7 +12,7 @@ export const getServerSideProps: GetServerSideProps = async ({ req }) => {
   }
   return {
     redirect: {
-      destination: `/${site.collections[0].slug}/`,
+      destination: `/${site.collections[0].slug}`,
       permanent: false,
     },
   };
