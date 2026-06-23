@@ -147,10 +147,9 @@ export const htmlComponents = {
         height={isFullWidth ? 640 : Math.min(Number(height) || 640, 640)}
         style={
           isFullWidth
-            ? {
-                width: "100%",
-                height: "auto",
-              }
+            ? width
+              ? { width: "100%", height: "auto" }
+              : { width: "auto", height: "auto", maxWidth: "fit-content" }
             : {
                 display: "block",
                 marginLeft: align === "center" || align === "right" ? "auto" : "0",
