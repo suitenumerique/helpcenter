@@ -153,3 +153,7 @@ body {
 .helpcenter-article .fr-summary {
   margin-bottom: 2rem;
 }
+
+.helpcenter-article .fr-summary li:has(> ol) {
+  padding-bottom: 0;
+}
