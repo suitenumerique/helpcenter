@@ -134,7 +134,9 @@ export const htmlComponents = {
 
     if (!src) return null;
 
-    const isFullWidth = !width || Number(width) >= 760;
+    // The CMS editor's canvas is 752px wide, so an image resized to 100%
+    // width in the editor is emitted with width="752".
+    const isFullWidth = !width || Number(width) >= 752;
 
     const align = props["data-text-alignment"] || "left";
 
@@ -149,7 +151,7 @@ export const htmlComponents = {
           isFullWidth
             ? width
               ? { width: "100%", height: "auto" }
-              : { width: "auto", height: "auto", maxWidth: "fit-content" }
+              : { width: "auto", height: "auto", maxWidth: "100%" }
             : {
                 display: "block",
                 marginLeft: align === "center" || align === "right" ? "auto" : "0",

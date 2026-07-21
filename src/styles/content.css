@@ -48,14 +48,26 @@
   margin: 0;
 }
 
+/* A blank line left inside a list item while editing comes through as an
+   empty <p></p>; it shouldn't reserve its own line of vertical space. */
+.helpcenter-article li > p:empty {
+  display: none;
+}
+
 /* Indent lists so bullets sit clear of the body text's left edge. */
 .helpcenter-article :is(ul, ol) {
   padding-left: 2rem;
 }
 
+/* A little breathing room between list items. */
+.helpcenter-article li {
+  margin-bottom: 0.35rem;
+}
+
 /* When a paragraph introduces a list ("Test de liste :" + <ul>), tighten the
-   gap so the list reads as attached to its lead-in. */
-.helpcenter-article p:has(+ :is(ul, ol)) {
+   gap so the list reads as attached to its lead-in. Excludes callouts, whose
+   own bottom margin should stay consistent regardless of what follows. */
+.helpcenter-article p:has(+ :is(ul, ol)):not(.helpcenter-callout) {
   margin-bottom: 0;
 }
 

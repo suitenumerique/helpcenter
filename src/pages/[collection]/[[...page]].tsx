@@ -124,7 +124,11 @@ export const getServerSideProps: GetServerSideProps<CollectionPageProps> = async
         text: p.title,
         href: `/${collection.slug}/${p.path}`,
       });
-      if (idx > 0) prevLink = toLink(flat[idx - 1]);
+      // A top-level section entry is always the first item of its section in
+      // the flattened walk, so the preceding item is really the last page of
+      // the *previous* section — not a "previous" page within this one.
+      const isFirstPageOfSection = sections.some((s) => s.id === currentPage!.id);
+      if (idx > 0 && !isFirstPageOfSection) prevLink = toLink(flat[idx - 1]);
       if (idx >= 0 && idx < flat.length - 1) nextLink = toLink(flat[idx + 1]);
     }
 

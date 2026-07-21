@@ -31,7 +31,8 @@
     "test": "npm run test:unit",
     "test:unit": "vitest run",
     "test:watch": "vitest watch",
-    "reindex": "tsx scripts/reindex.ts"
+    "reindex": "tsx scripts/reindex.ts",
+    "check-links": "DOCS_FETCH_CONCURRENCY=1 tsx scripts/check-links.ts"
   },
   "prettier": {
     "plugins": [

@@ -18,6 +18,20 @@ describe("extractFrontmatter", () => {
     expect(content).toBe("<p>body</p>");
   });
 
+  it("parses a block delimited by <hr> (the editor's rendering of a lone `---` line)", () => {
+    const html = "<hr><p>sommaire: false</p><hr><p>body</p>";
+    const { frontmatter, content } = extractFrontmatter(html);
+    expect(frontmatter.sommaire).toBe("false");
+    expect(content).toBe("<p>body</p>");
+  });
+
+  it("leaves an <hr>-delimited block untouched if it contains an unrecognized key", () => {
+    const html = "<hr><p>Note: important</p><hr><p>body</p>";
+    const { frontmatter, content } = extractFrontmatter(html);
+    expect(frontmatter).toEqual({});
+    expect(content).toBe(html);
+  });
+
   it("derives dateFormatted from frontmatter.date", () => {
     const html = "<p>---</p><p>date: 2026-01-15</p><p>---</p>";
     const { frontmatter } = extractFrontmatter(html);

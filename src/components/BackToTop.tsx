@@ -3,7 +3,7 @@ import Link from "next/link";
 
 export default function BackToTop() {
   return (
-    <div className={fr.cx("fr-mb-4w")} style={{ textAlign: "center" }}>
+    <div className={fr.cx("fr-mt-4w", "fr-mb-4w")} style={{ textAlign: "center" }}>
       <div className={fr.cx("fr-container")}>
         <Link
           className={fr.cx("fr-link", "fr-link--icon-left", "fr-icon-arrow-up-fill")}

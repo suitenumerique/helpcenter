@@ -14,8 +14,10 @@ const getDocsApiUrl = (path: string): string => {
 
 // Bounds concurrent docs CMS requests across the whole process. A page render
 // can fan out hundreds of tree fetches; without a cap the socket pool and the
-// upstream API both start refusing connections.
-const MAX_CONCURRENT_FETCHES = 4;
+// upstream API both start refusing connections. Overridable via env for
+// tools (e.g. the check-links script) that walk an entire collection in one
+// go and need to go gentler than a normal page render.
+const MAX_CONCURRENT_FETCHES = Number(process.env.DOCS_FETCH_CONCURRENCY) || 4;
 let inFlight = 0;
 const waiters: Array<() => void> = [];
 async function withFetchSlot<T>(fn: () => Promise<T>): Promise<T> {
@@ -39,41 +41,53 @@ async function fetchUrl(
   requiredKey: string | null = null,
   retries: number = 2,
 ): Promise<object | null> {
-  try {
-    for (let i = 0; i < retries; i++) {
-      // Start the abort timer only after we've acquired a slot — otherwise
-      // queueing for the concurrency cap eats the timeout budget and the
-      // fetch is aborted before it ever runs.
-      let timeoutId: ReturnType<typeof setTimeout> | undefined;
-      const freshResponse = await withFetchSlot(() => {
+  for (let i = 0; i < retries; i++) {
+    // Start the abort timer only after we've acquired a slot — otherwise
+    // queueing for the concurrency cap eats the timeout budget and the
+    // fetch is aborted before it ever runs.
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    let freshResponse: Response | null = null;
+    try {
+      freshResponse = await withFetchSlot(() => {
         const controller = new AbortController();
         timeoutId = setTimeout(() => controller.abort(), timeout * 1000);
         return fetch(url, { ...options, signal: controller.signal });
       });
-
+    } catch (error) {
+      // Network error or our own abort timeout — fall through to the same
+      // retry-with-backoff path as a non-ok HTTP response instead of giving
+      // up after a single attempt.
+      console.error(
+        `Error fetching ${url}: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    } finally {
       if (timeoutId !== undefined) clearTimeout(timeoutId);
+    }
 
-      if (freshResponse.ok) {
+    if (freshResponse?.ok) {
+      try {
         const freshData = await freshResponse.json();
         if (!requiredKey || freshData[requiredKey]) {
           return freshData;
         }
-      } else if (i < retries - 1) {
-        // Back off before retrying on 429/5xx — otherwise both attempts hammer
-        // the upstream in <1 ms and waste the retry budget.
-        const retryAfter = parseInt(freshResponse.headers.get("retry-after") || "0", 10);
-        const wait = retryAfter > 0 ? retryAfter * 1000 : 500 + 1000 * i;
-        await new Promise((r) => setTimeout(r, wait));
+      } catch (error) {
+        console.error(
+          `Error parsing response from ${url}: ${error instanceof Error ? error.message : String(error)}`,
+        );
       }
     }
 
-    return null;
-  } catch (error) {
-    console.error(
-      `Error fetching ${url}: ${error instanceof Error ? error.message : String(error)}`,
-    );
-    return null;
+    if (i < retries - 1) {
+      // Back off before retrying — otherwise repeated attempts hammer the
+      // upstream in <1 ms and waste the retry budget. Honor Retry-After on
+      // 429/5xx responses; fall back to a fixed backoff for network errors.
+      const retryAfter = parseInt(freshResponse?.headers.get("retry-after") || "0", 10);
+      const wait = retryAfter > 0 ? retryAfter * 1000 : 500 + 1000 * i;
+      await new Promise((r) => setTimeout(r, wait));
+    }
   }
+
+  return null;
 }
 
 // Cached fetch function with expiry and timeout for stale cache
@@ -183,22 +197,37 @@ export async function fetchDocumentChildren(
 
 // Pure helpers — exported for unit testing without hitting the CMS.
 
-// Extracts a frontmatter block of the form
-//   <p>---</p><p>key: value</p>…<p>---</p>
-// and returns {frontmatter, content} with the block stripped from content.
+// Keys recognized as page frontmatter. A candidate block containing any
+// other key is assumed to be real content that coincidentally looks like a
+// frontmatter block (e.g. a genuine <hr> divider followed by "Label: value"
+// text) and is left untouched rather than silently stripped.
+const FRONTMATTER_KEYS = new Set(["title", "path", "summary", "date", "image", "sommaire"]);
+
+// Extracts a frontmatter block delimited by a `---` fence and returns
+// {frontmatter, content} with the block stripped from content. The editor
+// auto-converts a lone `---` line into an <hr> block, so the fence is either
+// <hr> or, for content written some other way, a literal <p>---</p>:
+//   <hr><p>key: value</p>…<hr>
 // If `date` is present, a `dateFormatted` field (fr-FR locale) is added so
 // SSR and client agree on the string and don't hydrate-mismatch.
 export function extractFrontmatter(html: string): {
   frontmatter: Record<string, string>;
   content: string;
 } {
-  const frontmatter: Record<string, string> = {};
-  const match = html.match(/^<p>---<\/p>((<p>[a-z0-9_-]+\:\s.+?<\/p>)+)<p>---<\/p>/);
-  if (!match || !match[1]) return { frontmatter, content: html };
+  const fence = `(?:<hr\\s*\\/?>|<p>---<\\/p>)`;
+  const match = html.match(new RegExp(`^${fence}((?:<p>[a-z0-9_-]+\\:\\s.+?<\\/p>)+)${fence}`));
+  if (!match || !match[1]) return { frontmatter: {}, content: html };
+
+  const candidate: Record<string, string> = {};
   match[1].match(/<p>([a-z0-9]+)\:\s(.+?)<\/p>/g)?.forEach((p) => {
     const m = p.match(/<p>([a-z0-9]+)\:\s(.+?)<\/p>/);
-    if (m) frontmatter[m[1].toLowerCase()] = m[2];
+    if (m) candidate[m[1].toLowerCase()] = m[2];
   });
+  if (Object.keys(candidate).some((key) => !FRONTMATTER_KEYS.has(key))) {
+    return { frontmatter: {}, content: html };
+  }
+
+  const frontmatter = candidate;
   if (frontmatter.date) {
     frontmatter.dateFormatted = new Date(frontmatter.date).toLocaleDateString("fr-FR", {
       year: "numeric",
@@ -314,9 +343,10 @@ export async function getDocumentChildren(
   return response.results;
 }
 
-// Three-level fetch (sections → children → grandchildren) with per-fetch
+// Recursive fetch (sections → children → grandchildren → …) with per-fetch
 // tolerance so a single transient failure doesn't blank the whole tree.
 // Filters out `_drafts` at the top level. Used by both SSR and reindex.
+// Fan-out is bounded by withFetchSlot's global concurrency cap, not depth.
 export async function buildSectionTree(
   rootId: string,
   forceRefresh: boolean = false,
@@ -331,18 +361,14 @@ export async function buildSectionTree(
     }
   };
 
+  const fetchDescendants = async (item: DocsChild): Promise<void> => {
+    item.children = await safeChildren(item.id);
+    await Promise.all(item.children.map((child) => fetchDescendants(child)));
+  };
+
   const rawSections = (await getDocumentChildren(rootId, forceRefresh, noCache)).filter(
     (s) => s.title !== "_drafts",
   );
-  await Promise.all(
-    rawSections.map(async (section) => {
-      section.children = await safeChildren(section.id);
-      await Promise.all(
-        section.children.map(async (child) => {
-          child.children = await safeChildren(child.id);
-        }),
-      );
-    }),
-  );
+  await Promise.all(rawSections.map((section) => fetchDescendants(section)));
   return rawSections;
 }

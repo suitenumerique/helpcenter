@@ -77,7 +77,9 @@ export function DocPage({
               {currentPage.document?.frontmatter?.summary && (
                 <p className={fr.cx("fr-text--lead")}>{currentPage.document.frontmatter.summary}</p>
               )}
-              <TableOfContents deps={[currentPage.id]} />
+              {currentPage.document?.frontmatter?.sommaire !== "false" && (
+                <TableOfContents deps={[currentPage.id]} />
+              )}
               <DocumentContent document={currentPage.document} />
               {(prevLink || nextLink) && (
                 <nav

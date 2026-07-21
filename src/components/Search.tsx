@@ -183,7 +183,8 @@ export function SearchResults({
     return () => mq.removeEventListener("change", handleChange);
   }, [open, onClose]);
 
-  // Position dropdown under the search bar.
+  // Position dropdown under the search bar. Use absolute (document) coordinates
+  // so the dropdown scrolls with the search bar instead of floating in the viewport.
   useEffect(() => {
     if (!open) return;
     const searchBar = document.querySelector(".fr-header .fr-search-bar");
@@ -191,9 +192,9 @@ export function SearchResults({
     const update = () => {
       const rect = searchBar.getBoundingClientRect();
       setStyle({
-        position: "fixed",
-        top: rect.bottom,
-        left: rect.left,
+        position: "absolute",
+        top: rect.bottom + window.scrollY,
+        left: rect.left + window.scrollX,
         width: Math.max(rect.width, 400),
       });
     };

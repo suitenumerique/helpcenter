@@ -79,6 +79,10 @@ reindex:  ## Reindex CMS content into Redis (dev env must be running)
 	$(COMPOSE) exec frontend-dev npm run reindex
 .PHONY: reindex
 
+check-links:  ## Report broken internal doc-to-doc links (dev env must be running)
+	$(COMPOSE) exec frontend-dev npm run check-links
+.PHONY: check-links
+
 # ==============================================================================
 # LINTING AND TESTING
 
