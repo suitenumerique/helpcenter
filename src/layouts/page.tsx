@@ -69,15 +69,15 @@ export function PageLayout({ children, site, collectionSlug, sectionNavItems }: 
         },
         isActive: router.asPath.startsWith(`/${collection.slug}`),
       }))),
-    ...(site.parentSiteUrl
-      ? [
-          {
-            text: site.parentSiteLabel || "Retour au site",
-            linkProps: { href: site.parentSiteUrl },
-            isActive: false,
-          },
-        ]
-      : []),
+    // ...(site.parentSiteUrl
+    //   ? [
+    //       {
+    //         text: site.parentSiteLabel || "Retour au site",
+    //         linkProps: { href: site.parentSiteUrl },
+    //         isActive: false,
+    //       },
+    //     ]
+    //   : []),
   ];
 
   return (
