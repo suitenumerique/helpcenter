@@ -6,7 +6,10 @@
 #                           e.g. "1.2.3.4 5.6.7.0/24"
 #   PROXY_ALLOWED_COUNTRIES — space-separated country codes to allow (empty = open)
 #                           e.g. "FR DE BE"
-#   PROXY_GEOIP_DB_PATH   — path to the MaxMind/DB-IP mmdb file (required for geo-blocking)
+#   PROXY_GEOIP_DB_PATH   — path to the MaxMind/DB-IP mmdb file (downloaded at
+#                           deploy time by scalingo_postfrontend when
+#                           PROXY_GEOIP_DB_URL is set; a failed download fails
+#                           the deploy)
 #   PROXY_RATE_LIMIT_EVENTS     — max requests per IP per window (empty = no rate limiting)
 #   PROXY_RATE_LIMIT_WINDOW     — rate limit window duration (default: 10s)
 
@@ -27,12 +30,10 @@
 	@blocked client_ip {$PROXY_BLOCKED_IPS}
 	respond @blocked "Access denied" 403
 
-	# Geo-blocking — empty = open (space-separated country codes)
-	@geoblocked not maxmind_geolocation {
-		db_path {$PROXY_GEOIP_DB_PATH}
-		allow_countries {$PROXY_ALLOWED_COUNTRIES}
-	}
-	respond @geoblocked "Access denied" 403
+	# Geo-blocking (generated at runtime by scalingo_run_web; empty file when
+	# disabled or when the GeoIP DB is missing). Generated rather than inline
+	# because the maxmind module fails to boot if the .mmdb file is absent.
+	import geoblock.caddy
 
 	# Rate limiting — empty = disabled
 	import ratelimit.caddy

@@ -5,9 +5,19 @@ set -o pipefail   # don't ignore exit codes when piping output
 
 echo "-----> Running post-frontend script"
 
-echo "-----> Downloading GeoIP database for Caddy"
-mkdir -p "$(dirname "${PROXY_GEOIP_DB_PATH}")"
-curl -fLSs -o /tmp/caddy-geoip.mmdb.gz "${PROXY_GEOIP_DB_URL}" && gunzip -f /tmp/caddy-geoip.mmdb.gz && mv /tmp/caddy-geoip.mmdb "${PROXY_GEOIP_DB_PATH}"
+# Optional geo-blocking: PROXY_GEOIP_DB_URL must point to a raw .mmdb in GeoLite2
+# schema (country.iso_code). When set, a failed download fails the deploy (errexit)
+# — better than silently deploying without geo-blocking. When unset, geo-blocking
+# is simply disabled.
+if [ -n "${PROXY_GEOIP_DB_URL}" ]; then
+  echo "-----> Downloading GeoIP database for Caddy"
+  if [ -z "${PROXY_GEOIP_DB_PATH}" ]; then
+    echo "ERROR: PROXY_GEOIP_DB_PATH must be set when PROXY_GEOIP_DB_URL is set" >&2
+    exit 1
+  fi
+  mkdir -p "$(dirname "${PROXY_GEOIP_DB_PATH}")"
+  curl -fLSs -o "${PROXY_GEOIP_DB_PATH}" "${PROXY_GEOIP_DB_URL}"
+fi
 
 mv src/caddy/* .
 
