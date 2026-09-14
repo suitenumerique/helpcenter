@@ -129,7 +129,7 @@ export const htmlComponents = {
     node: _n,
     ...rest
   }: React.DetailsHTMLAttributes<HTMLDetailsElement> & { node?: unknown }) => <details {...rest} />,
-  img: (props: React.ImgHTMLAttributes<HTMLImageElement> & { "data-text-alignment"?: string }) => {
+  img: (props: React.ImgHTMLAttributes<HTMLImageElement>) => {
     const { src, alt, width, height } = props;
 
     if (!src) return null;
@@ -138,7 +138,8 @@ export const htmlComponents = {
     // width in the editor is emitted with width="752".
     const isFullWidth = !width || Number(width) >= 752;
 
-    const align = props["data-text-alignment"] || "left";
+    // Always centered, regardless of the alignment set in the CMS.
+    const centered = { display: "block", marginLeft: "auto", marginRight: "auto" };
 
     return (
       <Image
@@ -150,15 +151,9 @@ export const htmlComponents = {
         style={
           isFullWidth
             ? width
-              ? { width: "100%", height: "auto" }
-              : { width: "auto", height: "auto", maxWidth: "100%" }
-            : {
-                display: "block",
-                marginLeft: align === "center" || align === "right" ? "auto" : "0",
-                marginRight: align === "center" || align === "left" ? "auto" : "0",
-                maxWidth: "100%",
-                height: "auto",
-              }
+              ? { ...centered, width: "100%", height: "auto" }
+              : { ...centered, width: "auto", height: "auto", maxWidth: "100%" }
+            : { ...centered, maxWidth: "100%", height: "auto" }
         }
       />
     );

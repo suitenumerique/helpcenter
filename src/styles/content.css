@@ -93,6 +93,22 @@
   margin: 1rem 0 2rem 0;
 }
 
+/* Captioned images are wrapped in <figure> by the CMS: drop the UA default
+   40px side margins so they span the content width like bare images, and
+   keep the caption close to its image. */
+.helpcenter-article figure {
+  margin-inline: 0;
+}
+
+.helpcenter-article figure img {
+  margin-bottom: 0.5rem;
+}
+
+.helpcenter-article figcaption {
+  font-size: 0.875rem;
+  text-align: center;
+}
+
 /* Info paragraph that follows a FAQ accordion block: smaller secondary text. */
 .helpcenter-article section.fr-accordion ~ p {
   font-size: 0.85em;
