@@ -12,8 +12,8 @@ import { createEmotionSsrAdvancedApproach } from "tss-react/next";
 
 import { DefaultSeo } from "next-seo";
 
-import type { SectionNavItem } from "@/pages/[collection]/[[...page]]";
 import type { Site } from "@/lib/sites";
+import type { SectionNavItem } from "@/pages/[collection]/[[...page]]";
 import { PageLayout } from "../layouts/page";
 
 declare module "@codegouvfr/react-dsfr/next-pagesdir" {
