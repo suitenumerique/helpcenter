@@ -64,8 +64,7 @@ interface BrokenLink {
   linkText: string;
 }
 
-const INTERLINK_RE =
-  /<a\b[^>]*?\bhref="\/docs\/([0-9a-f-]+)\/?"[^>]*?>([\s\S]*?)<\/a>/gi;
+const INTERLINK_RE = /<a\b[^>]*?\bhref="\/docs\/([0-9a-f-]+)\/?"[^>]*?>([\s\S]*?)<\/a>/gi;
 
 function stripTags(html: string): string {
   return html.replace(/<[^>]+>/g, "").trim();

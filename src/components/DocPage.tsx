@@ -70,7 +70,9 @@ export function DocPage({
           </div>
         )}
 
-        <div className={`helpcenter-main-col${hasSidebar ? "" : " helpcenter-main-col--no-sidebar"}`}>
+        <div
+          className={`helpcenter-main-col${hasSidebar ? "" : " helpcenter-main-col--no-sidebar"}`}
+        >
           {currentPage ? (
             <article className="helpcenter-article">
               <h1 className="helpcenter-page-title">{pageTitle}</h1>
@@ -128,7 +130,6 @@ export function DocPage({
 
           <BackToTop />
         </div>
-
       </div>
     </div>
   );

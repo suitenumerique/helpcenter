@@ -73,8 +73,7 @@ export default function TableOfContents({ deps = [] }: { deps?: unknown[] }) {
         Array.from(article.querySelectorAll("h1, h2, h3, h4, h5")) as HTMLHeadingElement[]
       ).filter(
         (h) =>
-          !h.classList.contains("helpcenter-page-title") &&
-          !h.closest(".helpcenter-tile-grid"),
+          !h.classList.contains("helpcenter-page-title") && !h.closest(".helpcenter-tile-grid"),
       );
 
       const usedIds = new Set<string>();

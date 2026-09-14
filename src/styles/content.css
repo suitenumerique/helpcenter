@@ -19,7 +19,9 @@
   border-radius: 4px;
   padding: 6px;
   vertical-align: middle;
-  transition: opacity 0.15s, background-color 0.15s;
+  transition:
+    opacity 0.15s,
+    background-color 0.15s;
   flex-shrink: 0;
   cursor: pointer;
 }
