@@ -152,6 +152,9 @@ body {
 
 .helpcenter-article .fr-summary {
   margin-bottom: 2rem;
+  background-color: var(--background-alt-blue-france);
+  --hover: var(--background-alt-blue-france-hover);
+  --active: var(--background-alt-blue-france-active);
 }
 
 .helpcenter-article .fr-summary li:has(> ol) {
