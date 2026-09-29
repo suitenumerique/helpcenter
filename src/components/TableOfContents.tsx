@@ -132,7 +132,7 @@ export default function TableOfContents({ deps = [] }: { deps?: unknown[] }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
 
-  if (items.length === 0) return null;
+  if (items.length <= 1) return null;
 
   return <Summary links={toSummaryLinks(buildTree(items))} />;
 }
