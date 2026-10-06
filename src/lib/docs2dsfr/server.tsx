@@ -20,9 +20,13 @@ const getDocsApiUrl = (path: string): string => {
 const MAX_CONCURRENT_FETCHES = Number(process.env.DOCS_FETCH_CONCURRENCY) || 4;
 let inFlight = 0;
 const waiters: Array<() => void> = [];
+let throttledUntil = 0;
 async function withFetchSlot<T>(fn: () => Promise<T>): Promise<T> {
   if (inFlight >= MAX_CONCURRENT_FETCHES) {
     await new Promise<void>((resolve) => waiters.push(resolve));
+  }
+  while (Date.now() < throttledUntil) {
+    await new Promise((r) => setTimeout(r, throttledUntil - Date.now()));
   }
   inFlight++;
   try {
@@ -64,6 +68,15 @@ async function fetchUrl(
       if (timeoutId !== undefined) clearTimeout(timeoutId);
     }
 
+    if (freshResponse && !freshResponse.ok) {
+      console.error(`Error fetching ${url}: HTTP ${freshResponse.status}`);
+    }
+
+    const retryAfter = parseInt(freshResponse?.headers.get("retry-after") || "0", 10);
+    if (freshResponse?.status === 429 && retryAfter > 0) {
+      throttledUntil = Math.max(throttledUntil, Date.now() + retryAfter * 1000);
+    }
+
     if (freshResponse?.ok) {
       try {
         const freshData = await freshResponse.json();
@@ -81,7 +94,6 @@ async function fetchUrl(
       // Back off before retrying — otherwise repeated attempts hammer the
       // upstream in <1 ms and waste the retry budget. Honor Retry-After on
       // 429/5xx responses; fall back to a fixed backoff for network errors.
-      const retryAfter = parseInt(freshResponse?.headers.get("retry-after") || "0", 10);
       const wait = retryAfter > 0 ? retryAfter * 1000 : 500 + 1000 * i;
       await new Promise((r) => setTimeout(r, wait));
     }
@@ -108,13 +120,14 @@ async function cachedFetch(
 
   let cacheEntry: CacheEntry | null = null;
 
-  // If force refresh is requested, don't read from the cache
-  if (!forceRefresh && !noCache) {
+  if (!noCache) {
     cacheEntry = await cache.get(cacheKey);
 
     // If we have cached data and it's not expired, return it immediately
-    // Cache for 4000 seconds (1h+)
-    if (cacheEntry && !isExpired(cacheEntry, cacheTTL)) {
+    // Cache for 4000 seconds (1h+). Force refresh skips this but keeps the
+    // entry as a stale fallback: otherwise a transient upstream failure during
+    // reindex silently drops the page (or its whole subtree) from the index.
+    if (!forceRefresh && cacheEntry && !isExpired(cacheEntry, cacheTTL)) {
       return JSON.parse(cacheEntry.value.toString());
     }
   }
@@ -122,7 +135,7 @@ async function cachedFetch(
   const freshData = await fetchUrl(
     url,
     options,
-    cacheEntry ? staleCacheTimeout : requestTimeout,
+    cacheEntry && !forceRefresh ? staleCacheTimeout : requestTimeout,
     requiredKey,
     retries,
   );
@@ -140,12 +153,25 @@ async function cachedFetch(
   }
 }
 
+// `knownUpdatedAt` is the document's `updated_at` as listed by its parent's
+// children endpoint: when the cached content carries the same timestamp it is
+// still current, so it's reused even on force refresh or past its TTL. This
+// keeps a full reindex down to the children listings plus edited pages.
 export async function fetchDocumentContent(
   docId: string,
   forceRefresh: boolean = false,
   noCache: boolean = false,
+  knownUpdatedAt?: string,
 ): Promise<DocsContentResponse> {
   const url = getDocsApiUrl(`/documents/${docId}/formatted-content/?content_format=html`);
+
+  if (knownUpdatedAt && !noCache) {
+    const cached = await cache.get(`url:${url}`);
+    if (cached) {
+      const data = JSON.parse(cached.value.toString()) as DocsContentResponse;
+      if (data.updated_at === knownUpdatedAt) return data;
+    }
+  }
 
   const data = await cachedFetch(
     url,
@@ -288,8 +314,9 @@ export async function getDocument(
   docId: string,
   forceRefresh: boolean = false,
   noCache: boolean = false,
+  knownUpdatedAt?: string,
 ): Promise<DocsContentResponse> {
-  const document = await fetchDocumentContent(docId, forceRefresh, noCache);
+  const document = await fetchDocumentContent(docId, forceRefresh, noCache, knownUpdatedAt);
   document.frontmatter = {};
 
   if (!document.content) return document;
@@ -321,10 +348,15 @@ export async function getDocument(
   return document;
 }
 
+// Called for every fetch failure that buildSectionTree tolerates, so callers
+// (the reindex) can tell a complete tree from one with silently missing nodes.
+export type FetchErrorHandler = (docId: string, error: unknown) => void;
+
 export async function getDocumentChildren(
   parentId: string,
   forceRefresh: boolean = false,
   noCache: boolean = false,
+  onError?: FetchErrorHandler,
 ): Promise<DocsChild[]> {
   const response = await fetchDocumentChildren(parentId, forceRefresh, noCache);
 
@@ -333,9 +365,10 @@ export async function getDocumentChildren(
   await Promise.all(
     response.results.map(async (doc) => {
       try {
-        doc.document = await getDocument(doc.id, forceRefresh, noCache);
+        doc.document = await getDocument(doc.id, forceRefresh, noCache, doc.updated_at);
       } catch (e) {
         console.warn(`getDocument failed for ${doc.id}:`, e instanceof Error ? e.message : e);
+        onError?.(doc.id, e);
       }
     }),
   );
@@ -351,22 +384,26 @@ export async function buildSectionTree(
   rootId: string,
   forceRefresh: boolean = false,
   noCache: boolean = false,
+  onError?: FetchErrorHandler,
 ): Promise<DocsChild[]> {
   const safeChildren = async (id: string): Promise<DocsChild[]> => {
     try {
-      return await getDocumentChildren(id, forceRefresh, noCache);
+      return await getDocumentChildren(id, forceRefresh, noCache, onError);
     } catch (e) {
       console.warn(`children fetch failed for ${id}:`, e instanceof Error ? e.message : e);
+      onError?.(id, e);
       return [];
     }
   };
 
   const fetchDescendants = async (item: DocsChild): Promise<void> => {
-    item.children = await safeChildren(item.id);
+    // Leaves are most of the tree: skipping their (empty) children listing
+    // roughly halves the requests against the CMS rate limit.
+    item.children = item.numchild > 0 ? await safeChildren(item.id) : [];
     await Promise.all(item.children.map((child) => fetchDescendants(child)));
   };
 
-  const rawSections = (await getDocumentChildren(rootId, forceRefresh, noCache)).filter(
+  const rawSections = (await getDocumentChildren(rootId, forceRefresh, noCache, onError)).filter(
     (s) => s.title !== "_drafts",
   );
   await Promise.all(rawSections.map((section) => fetchDescendants(section)));

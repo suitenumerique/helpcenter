@@ -68,13 +68,15 @@ function collectPages(
   return pages;
 }
 
-async function gatherPages(site: Site): Promise<PageToIndex[]> {
+async function gatherPages(site: Site): Promise<{ pages: PageToIndex[]; failures: number }> {
   const pages: PageToIndex[] = [];
+  let failures = 0;
+  const onError = () => failures++;
   for (const collection of site.collections) {
     console.log(`  Fetching collection: ${collection.title} (${collection.slug})`);
     try {
       // forceRefresh=true: deploy-time index should reflect the latest CMS state.
-      const rawSections = await buildSectionTree(collection.docsId, true);
+      const rawSections = await buildSectionTree(collection.docsId, true, false, onError);
       const sections = rawSections.map((s) => buildPageItem(s));
       // CMS interlinks `/docs/UUID/` → helpcenter URLs (unresolved UUIDs get
       // their hrefs stripped so pagefind doesn't surface dead-link text).
@@ -84,6 +86,7 @@ async function gatherPages(site: Site): Promise<PageToIndex[]> {
       });
       pages.push(...collectPages(sections, collection.slug, collection.title));
     } catch (e) {
+      failures++;
       // One bad collection shouldn't tank the whole reindex — the next cron
       // run (every 10 min) will retry. Log and continue.
       console.error(
@@ -92,14 +95,16 @@ async function gatherPages(site: Site): Promise<PageToIndex[]> {
       );
     }
   }
-  return pages;
+  return { pages, failures };
 }
 
 interface PagefindModule {
   createIndex: (opts: Record<string, unknown>) => Promise<{
     index?: {
       addHTMLFile: (args: { url: string; content: string }) => Promise<{ errors: string[] }>;
-      getFiles: () => Promise<{ files: Array<{ path: string; content: Buffer | Uint8Array }> }>;
+      getFiles: () => Promise<{
+        files: Array<{ path: string; content: Buffer | Uint8Array }>;
+      }>;
     };
   }>;
   close: () => Promise<void>;
@@ -107,10 +112,19 @@ interface PagefindModule {
 
 async function reindexSite(site: Site, pagefind: PagefindModule, redis: Redis): Promise<void> {
   console.log(`\n=== Indexing site: ${site.host} ===`);
-  const pages = await gatherPages(site);
-  console.log(`Fetched ${pages.length} pages for ${site.host}`);
+  const { pages, failures } = await gatherPages(site);
+  console.log(`Fetched ${pages.length} pages for ${site.host} (${failures} fetch failure(s))`);
   if (pages.length === 0) {
     console.warn(`No pages to index for ${site.host} — skipping.`);
+    return;
+  }
+
+  const prefix = `pagefind:${site.host}:`;
+  const previousCount = Number(await redis.get(`${prefix}_page_count`)) || 0;
+  if (failures > 0 && pages.length < previousCount) {
+    console.warn(
+      `Incomplete fetch for ${site.host} (${pages.length} < ${previousCount} pages) — keeping current index.`,
+    );
     return;
   }
 
@@ -149,10 +163,10 @@ ${page.content}
   const { files } = await index.getFiles();
   console.log(`Pagefind generated ${files.length} files for ${site.host}`);
 
-  const prefix = `pagefind:${site.host}:`;
   const pipeline = redis.pipeline();
   pipeline.set(`${prefix}_manifest`, JSON.stringify(files.map((f) => f.path)));
   pipeline.expire(`${prefix}_manifest`, REDIS_TTL);
+  pipeline.set(`${prefix}_page_count`, String(pages.length), "EX", REDIS_TTL);
   for (const file of files) {
     const key = `${prefix}${file.path}`;
     pipeline.set(key, Buffer.from(file.content));
