@@ -52,6 +52,7 @@ All site-specific configuration lives in `HELPCENTER_SITES`, a JSON object index
     "parentSiteLabel": "Retour au site", // optional; label for the parent-site link
     "footerDescription": "...", // optional; footer description text
     "repositoryUrl": "https://github.com/...", // optional; footer "Contribute" link
+    "contactUrl": "mailto:...", // optional; header "Nous contacter" link (defaults to aide@suite.anct.gouv.fr)
     "matomoUrl": "https://matomo.example.com", // optional; tracking enabled when both matomo* are set
     "matomoSiteId": "42", // optional; Matomo site id (string)
     "collections": [

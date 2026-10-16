@@ -10,6 +10,9 @@ export interface NavCollection {
   title: string;
 }
 
+export const DEFAULT_CONTACT_URL =
+  "mailto:aide@suite.anct.gouv.fr?subject=Guide%20-%20Demande%20d'aide&body=Nom%20de%20la%20plateforme%20concernée%20:%20%0ADécrivez%20votre%20demande";
+
 export interface Site {
   host: string;
   title: string;
@@ -18,6 +21,7 @@ export interface Site {
   parentSiteLabel: string;
   footerDescription: string;
   repositoryUrl: string;
+  contactUrl: string;
   matomoUrl: string;
   matomoSiteId: string;
   collections: Collection[];
@@ -30,6 +34,7 @@ interface SiteConfig {
   parentSiteLabel?: string;
   footerDescription?: string;
   repositoryUrl?: string;
+  contactUrl?: string;
   matomoUrl?: string;
   matomoSiteId?: string;
   collections?: Collection[];
@@ -56,6 +61,7 @@ function parseSites(): Map<string, Site> {
       parentSiteLabel: cfg.parentSiteLabel ?? "",
       footerDescription: cfg.footerDescription ?? "",
       repositoryUrl: cfg.repositoryUrl ?? "",
+      contactUrl: cfg.contactUrl || DEFAULT_CONTACT_URL,
       matomoUrl: cfg.matomoUrl ?? "",
       matomoSiteId: cfg.matomoSiteId ?? "",
       collections: Array.isArray(cfg.collections) ? cfg.collections : [],
